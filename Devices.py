@@ -12,22 +12,6 @@ from adafruit_ads1x15.analog_in import AnalogIn
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 
 
-if args.device == '02':
-    ads_bus = busio.I2C(board.SCL, board.SDA)
-    ads_addr = 0x49
-    self.CURR_DRAW_DIV_RATIO = (10 + 4.7) / 10  # R1 = 4.7kOhm; R2 = 10kOhm
-    self.BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
-    CLK_SPD = 24350000
-elif args.device == '03':
-    ads_bus = I2C(6)
-    ads_addr = 0x48
-    self.CURR_DRAW_DIV_RATIO = 1  # no volt divider
-    self.BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
-    CLK_SPD = 24000000
-else:
-    print("ERROR -- NO DEVICE SPECIFIED!!")
-
-
 i2c_bus4 = I2C(4)
 PWM_OE = DigitalInOut(board.D26)
 PWM_OE.direction = Direction.OUTPUT
