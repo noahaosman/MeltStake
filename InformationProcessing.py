@@ -148,7 +148,7 @@ class Comms:
                 PORT = 4000
                 s = socket.socket()
                 s.connect((HOST, PORT))
-                fullmsg = '106 ' + msg + ' MS'
+                fullmsg = '106 RE: ' + msg
                 print(fullmsg)
                 s.send(fullmsg.encode())
                 s.close()

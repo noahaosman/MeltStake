@@ -46,7 +46,7 @@ class Operations:
         return
 
     def RELEASE(self, motors, arguments=None):  # release unit from ice face (approx 36 rotations to move length of ice screw)
-        self.DRILL(motors, [-50 -50])
+        self.DRILL(motors, [-50, -50])
     
     def OFF(self, motors):  # release unit from ice face
         self.disarm = True
@@ -66,10 +66,13 @@ class Operations:
         for data_req in arguments:
             print("Attemptng to transmit "+data_req+" data ... ")
             try:
-                msg = eval("data."+data_req)
+                dat = eval("data."+data_req)
+                msg = data_req + str(dat)
+                print(msg)
                 # transmit requested data
                 beacon.Transmit_Message(msg)
             except Exception:
+                print("Data transmission failed")
                 pass
 
         return
