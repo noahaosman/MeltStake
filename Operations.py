@@ -66,9 +66,9 @@ class Operations:
         for data_req in arguments:
             print("Attemptng to transmit "+data_req+" data ... ")
             try:
-                dat = eval("data."+data_req)
-                msg = data_req + str(dat)
-                print(msg)
+                data_list = eval("data."+data_req)
+                dat = [f"{data_point:.3f}" for data_point in data_list]
+                msg = data_req + " " + ' '.join(dat)
                 # transmit requested data
                 beacon.Transmit_Message(msg)
             except Exception:

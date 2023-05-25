@@ -149,8 +149,8 @@ class Comms:
                 s = socket.socket()
                 s.connect((HOST, PORT))
                 fullmsg = '106 RE: ' + msg
-                print(fullmsg)
                 s.send(fullmsg.encode())
                 s.close()
+                print(fullmsg)
             except Exception:
-                print(msg)
+                print("ERROR transmitting message: " + msg)
