@@ -37,7 +37,7 @@ class Data:
                 except:
                     last_line = ""  # placeholder line for empty file. This only happens when date changes mid deployment.
                 read_data = last_line.split("\t")[1:-1]
-                str_data = [f"{data_point:.3f}" for data_point in data_list]
+                str_data = [ f"{data_point:.3f}" if isinstance(data_point, float) else str(data_point) for data_point in data_list]
 
                 # write new data line
                 if str_data != read_data:  # replace this conditional with 'True' to save every data point
