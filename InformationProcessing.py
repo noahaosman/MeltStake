@@ -54,12 +54,11 @@ class Data:
 
         while True:
             time.sleep(1/sample_rate)
+            self.IV = []
+            self.IV.append(battery.voltage)
+            for i in range(len(motors)):
+                self.IV.append(battery.current[i])
             if abs(battery.current[0])+abs(battery.current[1]) > 0.25:  # if drawing more than 250 mA, record data
-                self.IV = []
-                self.IV.append(battery.voltage)
-                for i in range(len(motors)):
-                    self.IV.append(battery.current[i])
-                
                 self.WriteToFile(self.IV)
 
 
@@ -87,7 +86,7 @@ class Data:
                 self.PING = [ping_data["distance"], ping_data["confidence"]]
                 self.WriteToFile(self.PING)
 
-    def IMU(self, sample_rate = 10):  # to be ran as thread
+    def Orientation(self, sample_rate = 10):  # to be ran as thread
         self.WriteToFile()  # initialize data file
         time.sleep(5)  # give some time for other threads to start up
         

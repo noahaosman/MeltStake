@@ -12,17 +12,20 @@ from adafruit_ads1x15.analog_in import AnalogIn
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 
 
-# board V2
-# ads_bus = busio.I2C(board.SCL, board.SDA)
-# ads_addr = 0x49
-# CURR_DRAW_DIV_RATIO = (10 + 4.7) / 10  # R1 = 4.7kOhm; R2 = 10kOhm
-# BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
-
-# board V3
-ads_bus = I2C(6)
-ads_addr = 0x48
-CURR_DRAW_DIV_RATIO = 1  # no volt divider
-BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
+if args.device == '02':
+    ads_bus = busio.I2C(board.SCL, board.SDA)
+    ads_addr = 0x49
+    CURR_DRAW_DIV_RATIO = (10 + 4.7) / 10  # R1 = 4.7kOhm; R2 = 10kOhm
+    BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
+    CLK_SPD = 24350000
+elif args.device == '03':
+    ads_bus = I2C(6)
+    ads_addr = 0x48
+    CURR_DRAW_DIV_RATIO = 1  # no volt divider
+    BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
+    CLK_SPD = 24000000
+else:
+    print("ERROR -- NO DEVICE SPECIFIED!!")
 
 
 i2c_bus4 = I2C(4)
@@ -97,7 +100,7 @@ class Motor:
 
         # Create a simple PCA9685 class instance.
         self.pca = PCA9685(i2c_bus4)
-        self.pca.reference_clock_speed = 24350000  # Set the PWM frequency. Default 25000000
+        self.pca.reference_clock_speed = CLK_SPD  # Set the PWM frequency (Default 25000000)
         self.pca.frequency = 200  # Set the PWM duty cycle.
 
     def ARMED(self):  # to be ran as 1 thread per motor
@@ -147,9 +150,9 @@ class Motor:
     
     def count_pulses(self):
         if self.motor_no == 0:
-            pin = DigitalInOut(board.D5)
+            pin = DigitalInOut(board.D4)
         else:
-            pin = DigitalInOut(board.D4)#11
+            pin = DigitalInOut(board.D5)
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 
@@ -158,7 +161,7 @@ class Motor:
             pin_state = pin.value
             if pin_state == 0 and prior_pin_state == 1:
                 self.pulses = self.pulses + 1
-                # time.sleep(0.05)  # 0.05s debounce timer
+                time.sleep(0.05)  # 0.05s debounce timer
                 print("motor "+str(self.motor_no)+" rotations :: "+str(self.pulses))
             prior_pin_state = pin_state
             time.sleep(0.01)

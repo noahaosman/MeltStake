@@ -2,6 +2,7 @@
 import busio
 import board
 import time
+import argparse
 import numpy as np
 from datetime import datetime, timezone
 from threading import Thread
@@ -13,6 +14,13 @@ from Operations import Operations
 
 
 if __name__ == "__main__":
+
+    # parse arguements
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument("-d", "--device", help="Melt Stake number")
+    argParser.add_argument("-m", "--mode", help="mode of operation. Options: 'debug'")
+    global args 
+    args = argParser.parse_args()
 
     # Initialize classes
     battery = Devices.ADC()
@@ -33,7 +41,7 @@ if __name__ == "__main__":
     Thread(daemon=True, target=data.CurrentDraw, args=(battery, motors, SAMPLE_RATE,)).start()
     Thread(daemon=True, target=data.Rotations, args=(motors, SAMPLE_RATE,)).start()
     Thread(daemon=True, target=data.Ping, args=(SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.IMU, args=(SAMPLE_RATE,)).start()
+    Thread(daemon=True, target=data.Orientation, args=(SAMPLE_RATE,)).start()
     Thread(daemon=True, target=data.Pressure, args=(SAMPLE_RATE,)).start()
 
     beacon = Comms.Beacon()
@@ -54,7 +62,8 @@ if __name__ == "__main__":
             time.sleep(0.05)
 
             ### Receive/transmit beacon messages
-            # beacon.strmsg = input("input: ")  #  Terminal input for testing. Comment out for true beacon comms
+            if args.mode == 'debug':
+                beacon.strmsg = input("input: ")  #  Terminal input for testing. Comment out for true beacon comms
 
             if beacon.strmsg != '':
 
