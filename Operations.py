@@ -6,10 +6,13 @@ import numpy as np
 # This class contains all operations that can be called via acoustic beacon
 class Operations:
 
-    def __init__(self, motors):
+    def __init__(self, args, motors):
         self.num_motors = len(motors)
         self.disarm = False
-        self.speed = 0.2
+        if args.mode == 'debug':
+            self.speed = 0.2
+        else:
+            self.speed = 0.8
 
 
     def DRILL(self, motors, target_turns):  # Power each motor for the specified # of turns. Negative for CCW, Positive for CW.
@@ -42,17 +45,8 @@ class Operations:
         self.OFF(motors)
         return
 
-    # def RELEASE(self, motors, arguments=None):  # release unit from ice face
-    #     self.disarm = True
-    #     time.sleep(1)
-    #     for motor in motors:
-    #         motor.paused = False  # exit any overcurrent PAUSE() threads that may be running
-    #         motor.ChangeSpeed(float(-self.speed), smoothed=True)  # set motors to CCW:
-    #     # wait 20 seconds:
-    #     time.sleep(20)
-    #     # turn motors off (and do recovery things: GPS, flashing LEDs, ...?)
-    #     for motor in motors:
-    #         motor.OFF()
+    def RELEASE(self, motors, arguments=None):  # release unit from ice face (approx 36 rotations to move length of ice screw)
+        self.DRILL(motors, [-50 -50])
     
     def OFF(self, motors):  # release unit from ice face
         self.disarm = True

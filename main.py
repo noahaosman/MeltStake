@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # parse arguements
     argParser = argparse.ArgumentParser()
     argParser.add_argument("-d", "--device", help="Melt Stake number")
-    argParser.add_argument("-m", "--mode", help="mode of operation. Options: 'debug'")
+    argParser.add_argument("-m", "--mode", help=" mode of operation. Options: 'debug' ")
     args = argParser.parse_args()
 
     # Initialize classes
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     beacon = Comms.Beacon()
     Thread(daemon=True, target=beacon.Receive_Message).start()
 
-    commands = Operations(motors)
+    commands = Operations(args, motors)
     t_operation = Thread()  # initialize main thread variable
     known_commands = [attribute for attribute in dir(commands) if callable(getattr(commands, attribute)) and attribute.startswith('__') is False]
     print(known_commands)
@@ -98,9 +98,10 @@ if __name__ == "__main__":
             break
 
     if battery.under_voltage:
-        print("LOW BATTERY! :: "+ str(battery.voltage/((1 + 5.1) / 1)))
-        #TODO add a RELEASE call here before field deployment
+        print("LOW BATTERY! :: "+ str(battery.voltage/battery.BATT_VOLT_DIV_RATIO))
+        if args.mode == 'debug':
+            for i in range(len(motors)):
+                motors[i].OFF()  # set all motors to off before exiting code
+        else:
+            commands.RELEASE(motors)  # release device from ice face
 
-    # set all motors to off before exiting code
-    for i in range(len(motors)):
-        motors[i].OFF()
