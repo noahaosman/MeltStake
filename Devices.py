@@ -15,14 +15,14 @@ from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 if args.device == '02':
     ads_bus = busio.I2C(board.SCL, board.SDA)
     ads_addr = 0x49
-    CURR_DRAW_DIV_RATIO = (10 + 4.7) / 10  # R1 = 4.7kOhm; R2 = 10kOhm
-    BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
+    self.CURR_DRAW_DIV_RATIO = (10 + 4.7) / 10  # R1 = 4.7kOhm; R2 = 10kOhm
+    self.BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
     CLK_SPD = 24350000
 elif args.device == '03':
     ads_bus = I2C(6)
     ads_addr = 0x48
-    CURR_DRAW_DIV_RATIO = 1  # no volt divider
-    BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
+    self.CURR_DRAW_DIV_RATIO = 1  # no volt divider
+    self.BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
     CLK_SPD = 24000000
 else:
     print("ERROR -- NO DEVICE SPECIFIED!!")
@@ -37,6 +37,7 @@ class ADC:
 
     def __init__(
         self,
+        args,
         over_current_pause_time=10,  # time between drill attempts
         current_limit=13,  # 13
         voltage_limit=13.5
@@ -45,6 +46,19 @@ class ADC:
         self.current_limit = current_limit
         self.voltage_limit = voltage_limit
         self.under_voltage = False
+
+        if args.device == '02':
+            ads_bus = busio.I2C(board.SCL, board.SDA)
+            ads_addr = 0x49
+            self.CURR_DRAW_DIV_RATIO = (10 + 4.7) / 10  # R1 = 4.7kOhm; R2 = 10kOhm
+            self.BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
+        elif args.device == '03':
+            ads_bus = I2C(6)
+            ads_addr = 0x48
+            self.CURR_DRAW_DIV_RATIO = 1  # no volt divider
+            self.BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
+        else:
+            print("ERROR -- INVALID DEVICE!!")
 
         # Create the I2C bus interface.
         self.ads = ADS.ADS1115(ads_bus, address=ads_addr)
@@ -57,7 +71,7 @@ class ADC:
         self.current = []
         for i in range(motor_no):
             current_sensor.append(AnalogIn(self.ads, eval("ADS.P"+str(i))))
-            current_offset.append(10 * (2.5 - current_sensor[i].voltage * CURR_DRAW_DIV_RATIO))
+            current_offset.append(10 * (2.5 - current_sensor[i].voltage * self.CURR_DRAW_DIV_RATIO))
             self.over_current.append(False)
             self.current.append(-1)
         batt_voltage = AnalogIn(self.ads, ADS.P3)
@@ -66,14 +80,14 @@ class ADC:
             time.sleep(0.05)
             # measure current:
             for i in range(motor_no):
-                self.current[i] = 10 * (2.5 - current_sensor[i].voltage * CURR_DRAW_DIV_RATIO) - current_offset[i]
+                self.current[i] = 10 * (2.5 - current_sensor[i].voltage * self.CURR_DRAW_DIV_RATIO) - current_offset[i]
                 if self.current[i] > self.current_limit:
                     self.over_current[i] = True
                     Thread(daemon=True, target=motors[i].PAUSE, args=(self.over_current_pause_time,)).start()
                 else:
                     self.over_current[i] = False
             # measure voltage:
-            self.voltage = batt_voltage.voltage * BATT_VOLT_DIV_RATIO
+            self.voltage = batt_voltage.voltage * self.BATT_VOLT_DIV_RATIO
             if self.voltage < self.voltage_limit:
                 self.under_voltage = True
             else:
@@ -84,6 +98,7 @@ class Motor:
 
     def __init__(
         self,
+        args,
         motor_no,
         del_perc_speed=100  # avg. change in % speed per second
     ):
@@ -97,6 +112,13 @@ class Motor:
         self.target_speed = 0
         self.pulses = 0
         self.paused = False
+
+        if args.device == '02':
+            CLK_SPD = 24350000
+        elif args.device == '03':
+            CLK_SPD = 24000000
+        else:
+            print("ERROR -- INVALID DEVICE!!")
 
         # Create a simple PCA9685 class instance.
         self.pca = PCA9685(i2c_bus4)

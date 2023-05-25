@@ -19,12 +19,11 @@ if __name__ == "__main__":
     argParser = argparse.ArgumentParser()
     argParser.add_argument("-d", "--device", help="Melt Stake number")
     argParser.add_argument("-m", "--mode", help="mode of operation. Options: 'debug'")
-    global args 
     args = argParser.parse_args()
 
     # Initialize classes
-    battery = Devices.ADC()
-    motors = [Devices.Motor(0), Devices.Motor(1)]  # Hardware supports up to 3 motors
+    battery = Devices.ADC(args)
+    motors = [Devices.Motor(args, 0), Devices.Motor(args, 1)]  # Hardware supports up to 3 motors
     data = Data()
 
     print("opening threads...")
