@@ -53,19 +53,19 @@ class ImuMag:
         accRaw[0] = -accRaw[0]  # imu x axis points to the stern
         accRaw[1] = -accRaw[1]  # imu y axis points to the starboard
         accRaw[2] = -accRaw[2]  # imu z axis points down
-
-        # normalize the raw accelerometer data
-        norm_factor = sqrt(accRaw[0] * accRaw[0] + accRaw[1] * accRaw[1] + accRaw[2] * accRaw[2])
-        accXnorm = accRaw[0] / norm_factor
-        accYnorm = accRaw[1] / norm_factor
-
-        pitch = asin(accXnorm)
-        roll = -asin(accYnorm/cos(pitch))
-
-        # convert from radians to degrees
-        pitch_deg = pitch * (180/pi)
-        roll_deg = roll * (180/pi)
-
+        try:
+            # normalize the raw accelerometer data
+            norm_factor = sqrt(accRaw[0] * accRaw[0] + accRaw[1] * accRaw[1] + accRaw[2] * accRaw[2])
+            accXnorm = accRaw[0] / norm_factor
+            accYnorm = accRaw[1] / norm_factor
+            pitch = asin(accXnorm)
+            roll = -asin(accYnorm/cos(pitch))
+            # convert from radians to degrees
+            pitch_deg = pitch * (180/pi)
+            roll_deg = roll * (180/pi)
+        except Exception as e:
+            pitch_deg = 0
+            roll_deg = 0
         return pitch_deg, roll_deg
 
     def process_mag(self, magRaw, pitch_deg, roll_deg):

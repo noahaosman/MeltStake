@@ -103,5 +103,5 @@ cd /home/pi/packages/ping-python
 python3 setup.py install --user
 
 # configure main.py to run on boot
-echo 'python3 /home/pi/MeltStake/main.py &
+echo 'python3 /home/pi/MeltStake/main.py -d $ARG1 &
 exit 0' >> /etc/rc.local
