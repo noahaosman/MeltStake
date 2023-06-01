@@ -9,7 +9,8 @@ import ms5837
 from imu_mag import ImuMag
 
 class Data:
-
+    def __init__(self):
+        self.startup_delay = 3
 
     def WriteToFile(self, data_list = "init", data_bin = False):
         # use outer function name as data_bin if not specified
@@ -50,7 +51,7 @@ class Data:
 
     def CurrentDraw(self, battery, motors, sample_rate = 10):  # Format: Voltage    Current_1    ...    Current_n
         self.WriteToFile()  # initialize data file
-        time.sleep(5)  # give some time for other threads to start up
+        time.sleep(self.startup_delay)  # give some time for other threads to start up
 
         while True:
             time.sleep(1/sample_rate)
@@ -64,17 +65,17 @@ class Data:
 
     def Rotations(self, motors, sample_rate = 10):  # to be ran as thread
         self.WriteToFile()  # initialize data file
-        time.sleep(5)  # give some time for other threads to start up
+        time.sleep(self.startup_delay)  # give some time for other threads to start up
 
         while True:
             time.sleep(1/sample_rate)
-            self.ROT = [motors[motor_no].pulses for motor_no in range(len(motors))]
+            self.ROT = [motor.pulses for motor in motors]
             self.WriteToFile(self.ROT)
 
 
     def Ping(self, sample_rate = 10):  # Format: Distance    % confidence
         self.WriteToFile()  # initialize data file
-        time.sleep(5)  # give some time for other threads to start up
+        time.sleep(self.startup_delay)  # give some time for other threads to start up
         
         myPing = Ping1D()
         myPing.connect_serial("/dev/ttyAMA0", 115200)
@@ -88,7 +89,7 @@ class Data:
 
     def Orientation(self, sample_rate = 10):  # to be ran as thread
         self.WriteToFile()  # initialize data file
-        time.sleep(5)  # give some time for other threads to start up
+        time.sleep(self.startup_delay)  # give some time for other threads to start up
         
         im = ImuMag()  # initialize IMU
 
@@ -100,7 +101,7 @@ class Data:
 
     def Pressure(self, sample_rate = 10):  # to be ran as thread
         self.WriteToFile()  # initialize data file
-        time.sleep(5)  # give some time for other threads to start up
+        time.sleep(self.startup_delay)  # give some time for other threads to start up
 
         sensor = ms5837.MS5837_30BA(6)        
         if not sensor.init():  # initialize sensor

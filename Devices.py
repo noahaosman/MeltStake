@@ -22,8 +22,8 @@ class ADC:
     def __init__(
         self,
         args,
-        over_current_pause_time=10,  # time between drill attempts
-        current_limit=13,  # 13
+        over_current_pause_time=300,  # time between drill attempts
+        current_limit=13,
         voltage_limit=13.5
     ):
         self.over_current_pause_time = over_current_pause_time
@@ -64,7 +64,8 @@ class ADC:
             time.sleep(0.05)
             # measure current:
             for i in range(motor_no):
-                self.current[i] = 10 * (2.5 - current_sensor[i].voltage * self.CURR_DRAW_DIV_RATIO) - current_offset[i]
+                self.current[i] = 10 * (2.5 - current_sensor[i].voltage * self.CURR_DRAW_DIV_RATIO) \
+                    - current_offset[i]
                 if self.current[i] > self.current_limit:
                     self.over_current[i] = True
                     Thread(daemon=True, target=motors[i].PAUSE, args=(self.over_current_pause_time,)).start()
@@ -76,6 +77,7 @@ class ADC:
                 self.under_voltage = True
             else:
                 self.under_voltage = False
+        return
 
 
 class Motor:
@@ -116,6 +118,7 @@ class Motor:
             self.current_speed = self.easeinout()
             self.write_thrust(self.current_speed)
             time.sleep(self.time_between_steps)
+        return
 
     def ChangeSpeed(self, perc_in, smoothed=True):
         self.initial_speed = self.current_speed
@@ -126,6 +129,7 @@ class Motor:
         else:
             self.dx = 1
         self.x = 0
+        return
     
     def PAUSE(self, time_to_pause):
         self.paused = True
@@ -137,9 +141,11 @@ class Motor:
             wait_time = time.time() - start_time
             time.sleep(0.01)
         self.paused = False
+        return
 
     def OFF(self):
         self.ChangeSpeed(float(0), smoothed=False)
+        return
 
     def easeinout(self):
         miny = self.initial_speed
@@ -171,3 +177,36 @@ class Motor:
                 print("motor "+str(self.motor_no)+" rotations :: "+str(self.pulses))
             prior_pin_state = pin_state
             time.sleep(0.01)
+        return
+
+
+class SubLight:
+
+    def __init__(
+        self,
+        args
+    ):
+        
+        if args.device == '02':
+            CLK_SPD = 24350000
+        elif args.device == '03':
+            CLK_SPD = 24000000
+        else:
+            print("ERROR -- INVALID DEVICE!!")
+
+        # Create a simple PCA9685 class instance.
+        self.pca = PCA9685(i2c_bus4)
+        self.pca.reference_clock_speed = CLK_SPD  # Set the PWM frequency (Default 25000000)
+        self.pca.frequency = 200  # Set the PWM duty cycle.
+        pwm_input = 1500  # init off
+        self.pca.channels[15].duty_cycle = \
+            int(self.pca.frequency*(10**-6)*pwm_input*65535)
+
+    def AdjustBrightness(self, perc_on = 0.5):
+        perc_on = max(min(1, perc_on), 0)  # bound input to [0,1]
+        pwm_input = 1100+800*perc_on
+        self.pca.channels[15].duty_cycle = \
+            int(self.pca.frequency*(10**-6)*pwm_input*65535)
+        return
+
+        

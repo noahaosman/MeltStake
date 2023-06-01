@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# pyright: reportMissingImports=false
 
 from math import sin, cos, asin, atan2, sqrt, pi
 

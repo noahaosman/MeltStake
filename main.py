@@ -17,13 +17,14 @@ if __name__ == "__main__":
 
     # parse arguements
     argParser = argparse.ArgumentParser()
-    argParser.add_argument("-d", "--device", help="Melt Stake number")
-    argParser.add_argument("-m", "--mode", help=" mode of operation. Options: 'debug' ")
+    argParser.add_argument("-d", "--device", help="Melt Stake number", default='02')
+    argParser.add_argument("-m", "--mode", help=" mode of operation. Options: debug, deploy", default='deploy')
     args = argParser.parse_args()
 
     # Initialize classes
     battery = Devices.ADC(args)
     motors = [Devices.Motor(args, 0), Devices.Motor(args, 1)]  # Hardware supports up to 3 motors
+    light = Devices.SubLight(args)
     data = Data()
 
     print("opening threads...")
@@ -34,6 +35,7 @@ if __name__ == "__main__":
         Thread(daemon=True, target=motors[i].count_pulses).start()
         print("motor "+str(i)+" threads started")
     Thread(daemon=True, target=battery.MonitorVoltageCurrent, args=(len(motors), motors, )).start()
+    light.AdjustBrightness(0)  # turn on sub light
 
     # SAVE DATA:
     SAMPLE_RATE = 10  # data sampling rate in Hz
@@ -48,7 +50,8 @@ if __name__ == "__main__":
 
     commands = Operations(args, motors)
     t_operation = Thread()  # initialize main thread variable
-    known_commands = [attribute for attribute in dir(commands) if callable(getattr(commands, attribute)) and attribute.startswith('__') is False]
+    known_commands = [attribute for attribute in dir(commands) if \
+                      callable(getattr(commands, attribute)) and attribute.startswith('__') is False]
     print(known_commands)
 
     time.sleep(1)
@@ -62,7 +65,7 @@ if __name__ == "__main__":
 
             ### Receive/transmit beacon messages
             if args.mode == 'debug':
-                beacon.strmsg = input("input: ")  #  Terminal input for testing. Comment out for true beacon comms
+                beacon.strmsg = input("input: ")  # Terminal input for testing.
 
             if beacon.strmsg != '':
 
@@ -79,6 +82,10 @@ if __name__ == "__main__":
                 elif command == 'DATA':
                     commands.DATA(data, beacon, arguments)
 
+                elif command == 'LIGHT':
+                    flt_in = float(arguments[0])
+                    light.AdjustBrightness(flt_in/100)
+
                 elif command in known_commands:  # any other commands will begin as a thread
                     t_new = Thread(daemon=True, target=eval("commands."+command), args=(motors, arguments, ))
                     
@@ -86,7 +93,7 @@ if __name__ == "__main__":
                         t_operation = t_new
                         t_operation.start()
                     else:
-                        beacon.Transmit_Message("operation currently running... send 'OFF' to kill")
+                        beacon.Transmit_Message("BUSY -- SEND OFF TO CLEAR")
                         print("operation currently running... send 'OFF' to kill")
                 
                 beacon.strmsg = ''
@@ -95,6 +102,8 @@ if __name__ == "__main__":
         except Exception as e:
             print("--- RUNTIME ERROR: ---")
             print(e)
+            if args.mode != 'debug':
+                commands.RELEASE(motors)  # release device from ice face
             break
 
     if battery.under_voltage:
@@ -104,4 +113,6 @@ if __name__ == "__main__":
                 motors[i].OFF()  # set all motors to off before exiting code
         else:
             commands.RELEASE(motors)  # release device from ice face
+    
+    light.AdjustBrightness(0.0)
 
