@@ -4,6 +4,9 @@ import time
 import argparse
 import numpy as np
 from threading import Thread
+import os
+import subprocess
+import re
 
 import Devices
 import data_storage as data
@@ -18,9 +21,19 @@ if __name__ == "__main__":
 
     # parse arguements
     argParser = argparse.ArgumentParser()
-    argParser.add_argument("-d", "--device", help="Melt Stake number", default='02')
+    argParser.add_argument("-d", "--device", help="Melt Stake number", default='default')
     argParser.add_argument("-m", "--mode", help=" mode of operation. Options: debug, deploy", default='deploy')
     args = argParser.parse_args()
+    if args.device == 'default':
+        p = subprocess.Popen(['i2cdetect', '-y','1'],stdout=subprocess.PIPE,)
+        for i in range(0,9):
+            line = str(p.stdout.readline())
+            if i == 5:
+                i2cdev0x49 = line[33:35]
+        if i2cdev0x49 == '49':
+            args.device = '02'
+        else:
+            args.device = '03'
 
     # Initialize classes
     battery = Devices.ADC(args)
