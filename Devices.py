@@ -10,7 +10,14 @@ from adafruit_pca9685 import PCA9685  # PCA9685 module (PWM driver)
 import adafruit_ads1x15.ads1115 as ADS  # ADS1115 module (ADC)
 from adafruit_ads1x15.analog_in import AnalogIn
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
+from math import sin, cos, asin, atan2, sqrt, pi
+import socket
+from icm20602 import ICM20602
+from mmc5983 import MMC5983
+import logging
 
+logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
+                    format="%(asctime)-15s %(levelname)-8s %(message)s")
 
 i2c_bus4 = I2C(4)
 PWM_OE = DigitalInOut(board.D26)
@@ -22,8 +29,8 @@ class ADC:
     def __init__(
         self,
         args,
-        over_current_pause_time=300,  # time between drill attempts
-        current_limit=13,
+        over_current_pause_time=30,  # time between drill attempts
+        current_limit=1,
         voltage_limit=13.5
     ):
         self.over_current_pause_time = over_current_pause_time
@@ -64,8 +71,8 @@ class ADC:
             time.sleep(0.05)
             # measure current:
             for i in range(motor_no):
-                self.current[i] = 10 * (2.5 - current_sensor[i].voltage * self.CURR_DRAW_DIV_RATIO) \
-                    - current_offset[i]
+                self.current[i] = abs(10 * (2.5 - current_sensor[i].voltage * self.CURR_DRAW_DIV_RATIO) \
+                    - current_offset[i])
                 if self.current[i] > self.current_limit:
                     self.over_current[i] = True
                     Thread(daemon=True, target=motors[i].PAUSE, args=(self.over_current_pause_time,)).start()
@@ -97,7 +104,7 @@ class Motor:
         self.initial_speed = 0
         self.target_speed = 0
         self.pulses = 0
-        self.paused = False
+        self.overdrawn = False
 
         if args.device == '02':
             CLK_SPD = 24350000
@@ -132,16 +139,14 @@ class Motor:
         return
     
     def PAUSE(self, time_to_pause):
-        self.paused = True
-        print("Current threshold reached. Pausing motor "+str(self.motor_no)+" for "+str(time_to_pause)+"s")
+        self.overdrawn = True
+        logging.info("Current threshold reached. Turning off motor "+str(self.motor_no))
         start_time = time.time()
         wait_time = time.time() - start_time
-        while wait_time < time_to_pause and self.paused:
-            self.OFF()
+        while wait_time < time_to_pause:
             wait_time = time.time() - start_time
             time.sleep(0.01)
-        self.paused = False
-        return
+        self.overdrawn = False
 
     def OFF(self):
         self.ChangeSpeed(float(0), smoothed=False)
@@ -173,8 +178,7 @@ class Motor:
             pin_state = pin.value
             if pin_state == 0 and prior_pin_state == 1:
                 self.pulses = self.pulses + 1
-                time.sleep(0.05)  # 0.05s debounce timer
-                print("motor "+str(self.motor_no)+" rotations :: "+str(self.pulses))
+                time.sleep(0.15)  # debounce timer
             prior_pin_state = pin_state
             time.sleep(0.01)
         return
@@ -209,4 +213,150 @@ class SubLight:
             int(self.pca.frequency*(10**-6)*pwm_input*65535)
         return
 
+
+class ImuMag:
+
+    def __init__(self):
+
+        self.icm = ICM20602()
+        self.mmc = MMC5983(i2cbus=None)
+
+    def get_imu(self):
+
+        data = self.icm.read_all()
+        acc = [data.a.x, data.a.y, data.a.z]
+        # gyr = [data.g.x, data.g.y, data.g.z]
+
+        return acc
+
+    def get_mag(self):
+
+        # read the data
+        data = self.mmc.read_data()
+        mag = [data.x, data.y, data.z]
+        # mag_raw = [data.x_raw, data.y_raw, data.z_raw]
+
+        return mag
+
+    def cal_mag(self):
+
+        self.mmc.calibrate()
+        # cal = [self.mmc.caldata[0], self.mmc.caldata[1], self.mmc.caldata[2]]
+
+    def process_imu(self, accRaw):
+        """ Processes raw IMU data to derive pitch and roll.
+        Pitch is positive when the bow lifts up.
+        Roll is positive when the port side lifts up.
+        """
+
+        # desired XYZ directions (standard)
+        # X - point toward bow
+        # Y - point to port
+        # Z - point up
+
+        # uncomment the relevant lines depending on the IMU orientation
+        accRaw[0] = -accRaw[0]  # imu x axis points to the stern
+        accRaw[1] = -accRaw[1]  # imu y axis points to the starboard
+        accRaw[2] = -accRaw[2]  # imu z axis points down
+        try:
+            # normalize the raw accelerometer data
+            norm_factor = sqrt(accRaw[0] * accRaw[0] + accRaw[1] * accRaw[1] + accRaw[2] * accRaw[2])
+            accXnorm = accRaw[0] / norm_factor
+            accYnorm = accRaw[1] / norm_factor
+            pitch = asin(accXnorm)
+            roll = -asin(accYnorm/cos(pitch))
+            # convert from radians to degrees
+            pitch_deg = pitch * (180/pi)
+            roll_deg = roll * (180/pi)
+        except Exception as e:
+            pitch_deg = 0
+            roll_deg = 0
+        return pitch_deg, roll_deg
+
+    def process_mag(self, magRaw, pitch_deg, roll_deg):
+        """ Processes raw magnetometer data to derive heading.
+        Compensates for pitch and roll.
+        Heading is measured clockwise in degrees from magnetic north.
+        Pitch and roll are expected to be in degrees.
+        *** This method is not outputting correct heading values. ***
+        """
+
+        # desired XYZ directions (standard)
+        # X - point toward bow
+        # Y - point to port
+        # Z - point up
+
+        # uncomment the relevant lines depending on the magnetometer orientation
+        # magRaw[0] = -magRaw[0]  # mag x axis points to the stern
+        magRaw[1] = -magRaw[1]  # mag y axis points to the starboard
+        # magRaw[2] = -magRaw[2]  # mag z axis points down
+
+        # convert from degrees to radians
+        pitch = pitch_deg * (pi/180)
+        roll = roll_deg * (pi/180)
+
+        # compensate for the pitch and roll
+        magXcomp = magRaw[0]*cos(pitch) + magRaw[2]*sin(pitch)
+        magYcomp = magRaw[0]*sin(roll)*sin(pitch) + magRaw[1]*cos(roll) - magRaw[2]*sin(roll)*cos(pitch)
+        # magXcomp = magRaw[0]*cos(pitch) - magRaw[2]*sin(pitch)
+        # magYcomp = magRaw[0]*sin(roll)*sin(pitch) + magRaw[1]*cos(roll) + magRaw[2]*sin(roll)*cos(pitch)
+
+        # compensated heading in radians
+        heading = atan2(magYcomp, magXcomp)
+
+        # convert from radians to degrees
+        heading_deg = heading * (180/pi)
+
+        # convert heading from math angles (degrees CCW from x) to azimuth (degrees CW from north)
+        # heading_deg = 90 - heading_deg
+
+        # keep heading in the range 0 - 360
+        if heading_deg < 0:
+            heading_deg += 360
+
+        return heading_deg
+
+    def main(self):
+
+        self.cal_mag()
+        acc = self.get_imu()
+        mag = self.get_mag()
+
+        pitch, roll = self.process_imu(acc)
+        heading = self.process_mag(mag, pitch, roll)
+
+        return pitch, roll, heading
         
+
+class Beacon:
+
+    def __init__(self):
+        self.strmsg = ''
+
+    def Receive_Message(self):  # to be ran as thread
+        PORT = 3000
+        HOST = '127.0.0.1'
+        MAX_LENGTH = 4096
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serversocket.bind((HOST, PORT))
+        serversocket.listen(5)
+        while True:
+            # accept connections from outside
+            (clientsocket, address) = serversocket.accept()
+            msg = clientsocket.recv(MAX_LENGTH)
+            if msg == '':  # client terminated connection
+                clientsocket.close()
+            self.strmsg = msg.decode()
+
+    def Transmit_Message(self, msg):
+        try:
+            HOST = '127.0.0.1'
+            PORT = 4000
+            s = socket.socket()
+            s.connect((HOST, PORT))
+            fullmsg = '106 RE: ' + msg
+            s.send(fullmsg.encode())
+            s.close()
+            logging.info(fullmsg)
+        except Exception:
+            logging.info("ERROR transmitting message: " + msg)

@@ -66,6 +66,7 @@ apt-get install -y python3-dev
 export PATH="/home/pi/.local/bin:$PATH"
 apt-get install -y python3-numpy
 apt-get install -y git
+pip3 install logging
 pip3 install Adafruit-Blinka
 pip3 install adafruit-circuitpython-ads1x15
 pip3 install adafruit-circuitpython-pca9685

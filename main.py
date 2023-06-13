@@ -1,19 +1,20 @@
 # pyright: reportMissingImports=false
-import busio
-import board
+import logging
 import time
 import argparse
 import numpy as np
-from datetime import datetime, timezone
 from threading import Thread
-from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 
 import Devices
-from InformationProcessing import Data, Comms
+import data_storage as data
 from Operations import Operations
 
 
 if __name__ == "__main__":
+
+    # assign log file
+    logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
+                        format="%(asctime)-15s %(levelname)-8s %(message)s")
 
     # parse arguements
     argParser = argparse.ArgumentParser()
@@ -25,7 +26,6 @@ if __name__ == "__main__":
     battery = Devices.ADC(args)
     motors = [Devices.Motor(args, 0), Devices.Motor(args, 1)]  # Hardware supports up to 3 motors
     light = Devices.SubLight(args)
-    data = Data()
 
     print("opening threads...")
     t_ARMED = []
@@ -33,7 +33,6 @@ if __name__ == "__main__":
     for i in range(len(motors)):
         Thread(daemon=True, target=motors[i].ARMED).start()
         Thread(daemon=True, target=motors[i].count_pulses).start()
-        print("motor "+str(i)+" threads started")
     Thread(daemon=True, target=battery.MonitorVoltageCurrent, args=(len(motors), motors, )).start()
     light.AdjustBrightness(0)  # turn on sub light
 
@@ -45,7 +44,7 @@ if __name__ == "__main__":
     Thread(daemon=True, target=data.Orientation, args=(SAMPLE_RATE,)).start()
     Thread(daemon=True, target=data.Pressure, args=(SAMPLE_RATE,)).start()
 
-    beacon = Comms.Beacon()
+    beacon = Devices.Beacon()
     Thread(daemon=True, target=beacon.Receive_Message).start()
 
     commands = Operations(args, motors)
@@ -55,7 +54,6 @@ if __name__ == "__main__":
     print(known_commands)
 
     time.sleep(1)
-    print("All threads started")
 
     # MAIN LOOP:
     while not battery.under_voltage:
@@ -100,14 +98,14 @@ if __name__ == "__main__":
 
 
         except Exception as e:
-            print("--- RUNTIME ERROR: ---")
-            print(e)
+            logging.info("--- RUNTIME ERROR: ---")
+            logging.info(e)
             if args.mode != 'debug':
                 commands.RELEASE(motors)  # release device from ice face
             break
 
     if battery.under_voltage:
-        print("LOW BATTERY! :: "+ str(battery.voltage/battery.BATT_VOLT_DIV_RATIO))
+        logging.info("LOW BATTERY! :: "+ str(battery.voltage/battery.BATT_VOLT_DIV_RATIO))
         if args.mode == 'debug':
             for i in range(len(motors)):
                 motors[i].OFF()  # set all motors to off before exiting code
