@@ -3,6 +3,8 @@ Code for melt stake control, interfacing, and data collection.
 
 # Installation
 The simplest installation method is via git:
+- `sudo apt update`
+- `sudo apt install -y git`
 - `cd ~/`
 - `git clone https://github.com/noahaosman/MeltStake`
 - `cd MeltStake`

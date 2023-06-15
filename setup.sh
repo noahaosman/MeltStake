@@ -27,7 +27,7 @@ dtoverlay=i2c-gpio,bus=4,i2c_gpio_sda=6,i2c_gpio_scl=7
 dtoverlay=i2c-gpio,bus=6,i2c_gpio_sda=22,i2c_gpio_scl=23
 EOM
 
-echo "$INTERFACE_LINE" >> "$INTERFACE_LINE"
+echo "$INTERFACE_LINE" >> "$INTERFACE_FILE"
 
 # Configure wifi network settings
 WPA_FILE='/etc/wpa_supplicant/wpa_supplicant.conf'
@@ -104,5 +104,5 @@ cd /home/pi/packages/ping-python
 python3 setup.py install --user
 
 # configure main.py to run on boot
-echo 'python3 /home/pi/MeltStake/main.py -d $ARG1 -m deploy &
-exit 0' >> /etc/rc.local
+#echo 'python3 /home/pi/MeltStake/main.py -d $ARG1 -m deploy &
+#exit 0' >> /etc/rc.local
