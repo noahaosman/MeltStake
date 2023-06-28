@@ -1,4 +1,7 @@
 # pyright: reportMissingImports=false
+import os
+import re
+from Clock_Speed import CLK_SPD
 import busio
 import board
 from adafruit_extended_bus import ExtendedI2C as I2C
@@ -24,11 +27,26 @@ PWM_OE = DigitalInOut(board.D26)
 PWM_OE.direction = Direction.OUTPUT
 PWM_OE.value = False  # armed
 
+# get device number from static IP
+try:
+    f = open("/etc/dhcpcd.conf", "r")
+    sstrn = 'static ip_address=10.0.1.1'
+    for line in f:
+        if line.startswith(sstrn):
+            devno = re.split(sstrn+'|/',  line)[1]
+except Exception:
+    devno = '00'
+# set clock speed
+if devno in CLK_SPD:
+    CLK_SPD = CLK_SPD[devno]
+else:
+    CLK_SPD = CLK_SPD['00']
+
+
 class ADC:
 
     def __init__(
         self,
-        args,
         over_current_pause_time=30,  # time between drill attempts
         current_limit=1,
         voltage_limit=13.5
@@ -38,18 +56,13 @@ class ADC:
         self.voltage_limit = voltage_limit
         self.under_voltage = False
 
-        if args.device == '02':
-            ads_bus = busio.I2C(board.SCL, board.SDA)
-            ads_addr = 0x49
-            self.CURR_DRAW_DIV_RATIO = (10 + 4.7) / 10  # R1 = 4.7kOhm; R2 = 10kOhm
-            self.BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
-        elif args.device == '03':
-            ads_bus = I2C(6)
-            ads_addr = 0x48
-            self.CURR_DRAW_DIV_RATIO = 1  # no volt divider
-            self.BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
-        else:
-            print("ERROR -- INVALID DEVICE!!")
+        Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
+        bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
+        print("ADS i2c bus : "+str(int(bus[0].split('-')[1])))
+        ads_bus = I2C(int(bus[0].split('-')[1]))
+        ads_addr = 0x48
+        self.CURR_DRAW_DIV_RATIO = 1  # no volt divider
+        self.BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
 
         # Create the I2C bus interface.
         self.ads = ADS.ADS1115(ads_bus, address=ads_addr)
@@ -91,9 +104,8 @@ class Motor:
 
     def __init__(
         self,
-        args,
         motor_no,
-        del_perc_speed=100  # avg. change in % speed per second
+        del_perc_speed=100  # avg. change in % speed per second (dec for more smoothing)
     ):
         self.motor_no = motor_no
         self.del_perc_speed = del_perc_speed
@@ -105,13 +117,6 @@ class Motor:
         self.target_speed = 0
         self.pulses = 0
         self.overdrawn = False
-
-        if args.device == '02':
-            CLK_SPD = 24350000
-        elif args.device == '03':
-            CLK_SPD = 24000000
-        else:
-            print("ERROR -- INVALID DEVICE!!")
 
         # Create a simple PCA9685 class instance.
         self.pca = PCA9685(i2c_bus4)
@@ -183,20 +188,11 @@ class Motor:
             time.sleep(0.01)
         return
 
-
 class SubLight:
 
     def __init__(
         self,
-        args
     ):
-        
-        if args.device == '02':
-            CLK_SPD = 24350000
-        elif args.device == '03':
-            CLK_SPD = 24000000
-        else:
-            print("ERROR -- INVALID DEVICE!!")
 
         # Create a simple PCA9685 class instance.
         self.pca = PCA9685(i2c_bus4)

@@ -88,7 +88,7 @@ def Orientation(sample_rate = 10):  # Format: pitch    roll    heading
 def Pressure(sample_rate = 10):  # to be ran as thread
     time.sleep(startup_delay)  # give some time for other threads to start up
 
-    sensor = ms5837.MS5837_30BA(6)        
+    sensor = ms5837.MS5837_30BA(11)        
     if not sensor.init():  # initialize sensor
         logging.info("Pressure sensor could not be initialized")
         exit(1)

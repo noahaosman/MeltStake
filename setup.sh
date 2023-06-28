@@ -2,10 +2,10 @@
 
 ARG1=${1:-'00'}
 
+
 # Configure static IP
 ip r | grep default
 cat /etc/resolv.conf
-
 IP_FILE='/etc/dhcpcd.conf'
 read -r -d '' IP_LINE << EOM
 interface wlan0
@@ -13,8 +13,17 @@ static ip_address=10.0.1.1$ARG1/24
 static routers=10.0.1.1
 static domain_name_servers=10.0.1.1
 EOM
-
 echo "$IP_LINE" >> "$IP_FILE"
+
+
+# Setup RTC
+wget https://raw.githubusercontent.com/raspberrypi/linux/rpi-4.14.y/arch/arm/boot/dts/overlays/i2c-rtc-gpio-overlay.dts
+dtc -I dts -O dtb -o i2c-gpio-rtc.dtbo i2c-gpio-rtc-overlay.dts
+sudo cp i2c-rtc-gpio.dtbo /boot/overlays
+sudo rm i2c*
+sudo timedatectl set-timezone UTC
+# on initial boot set to current time eg: sudo date -u -s '22 Jun 2023 18:34:00' 
+
 
 # Configure interfacing options
 INTERFACE_FILE='/boot/config.txt'
@@ -24,10 +33,10 @@ dtoverlay=spi1-3cs
 dtparam=i2c_arm=on
 dtoverlay=i2c-gpio,bus=1,i2c_gpio_sda=2,i2c_gpio_scl=3
 dtoverlay=i2c-gpio,bus=4,i2c_gpio_sda=6,i2c_gpio_scl=7
-dtoverlay=i2c-gpio,bus=6,i2c_gpio_sda=22,i2c_gpio_scl=23
+dtoverlay=i2c-rtc-gpio,ds3231,i2c_gpio_sda=22,i2c_gpio_scl=23
 EOM
-
 echo "$INTERFACE_LINE" >> "$INTERFACE_FILE"
+
 
 # Configure wifi network settings
 WPA_FILE='/etc/wpa_supplicant/wpa_supplicant.conf'
@@ -55,7 +64,6 @@ network={
   priority=1
 }
 EOM
-
 echo "$WPA_LINE" > "$WPA_FILE"
 
 # Install required Python packages

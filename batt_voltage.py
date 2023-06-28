@@ -1,5 +1,7 @@
 # pyright: reportMissingImports=false
 import busio
+import os
+import re
 import board
 from adafruit_extended_bus import ExtendedI2C as I2C
 import time
@@ -33,16 +35,13 @@ argParser.add_argument("-d", "--device", help="Melt Stake number")
 args = argParser.parse_args()
 
 
-if args.device == '02':
-	ads_bus = busio.I2C(board.SCL, board.SDA)
-	ads_addr = 0x49
-	BATT_VOLT_DIV_RATIO = (1 + 5.1) / 1  # R1 = 5.1kOhm; R2 = 1kOhm
-elif args.device == '03':
-	ads_bus = I2C(6)
-	ads_addr = 0x48
-	BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
-else:
-	print("ERROR -- INVALID DEVICE!!")
+Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
+bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
+print("ADS i2c bus : "+str(int(bus[0].split('-')[1])))
+ads_bus = I2C(int(bus[0].split('-')[1]))
+ads_addr = 0x48
+BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
+
 
 # Create the I2C bus interface.
 ads = ADS.ADS1115(ads_bus, address=ads_addr)
