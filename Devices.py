@@ -48,7 +48,7 @@ class ADC:
     def __init__(
         self,
         over_current_pause_time=30,  # time between drill attempts
-        current_limit=1,
+        current_limit=14,
         voltage_limit=13.5
     ):
         self.over_current_pause_time = over_current_pause_time
@@ -172,9 +172,9 @@ class Motor:
     
     def count_pulses(self):
         if self.motor_no == 0:
-            pin = DigitalInOut(board.D4)
-        else:
             pin = DigitalInOut(board.D5)
+        else:
+            pin = DigitalInOut(board.D4)
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 
@@ -352,6 +352,12 @@ class Beacon:
             s.connect((HOST, PORT))
             fullmsg = '106 RE: ' + msg
             s.send(fullmsg.encode())
+
+            # hotfix for sending responses to laptop beacon. Should be able to just tell ID of pinging beacon?
+            time.sleep(0.5) 
+            fullmsg = '203 RE: ' + msg
+            s.send(fullmsg.encode())
+
             s.close()
             logging.info(fullmsg)
         except Exception:

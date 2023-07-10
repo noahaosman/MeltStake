@@ -18,7 +18,7 @@ echo "$IP_LINE" >> "$IP_FILE"
 
 # Setup RTC
 wget https://raw.githubusercontent.com/raspberrypi/linux/rpi-4.14.y/arch/arm/boot/dts/overlays/i2c-rtc-gpio-overlay.dts
-dtc -I dts -O dtb -o i2c-gpio-rtc.dtbo i2c-gpio-rtc-overlay.dts
+dtc -I dts -O dtb -o i2c-rtc-gpio.dtbo i2c-rtc-gpio-overlay.dts
 sudo cp i2c-rtc-gpio.dtbo /boot/overlays
 sudo rm i2c*
 sudo timedatectl set-timezone UTC
@@ -28,6 +28,7 @@ sudo timedatectl set-timezone UTC
 # Configure interfacing options
 INTERFACE_FILE='/boot/config.txt'
 read -r -d '' INTERFACE_LINE << EOM
+dtoverlay=disable-bt
 enable_uart=1
 dtoverlay=spi1-3cs
 dtparam=i2c_arm=on
@@ -36,6 +37,8 @@ dtoverlay=i2c-gpio,bus=4,i2c_gpio_sda=6,i2c_gpio_scl=7
 dtoverlay=i2c-rtc-gpio,ds3231,i2c_gpio_sda=22,i2c_gpio_scl=23
 EOM
 echo "$INTERFACE_LINE" >> "$INTERFACE_FILE"
+echo "i2c-dev" >> /etc/modules
+
 
 
 # Configure wifi network settings
@@ -109,6 +112,10 @@ python3 setup.py install --user
 git clone --single-branch --branch deployment https://github.com/bluerobotics/ping-python.git /home/pi/packages/ping-python
 cd /home/pi/packages/ping-python
 python3 setup.py install --user
+
+# install camera code
+git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git
+bash /home/pi/camera_capture/setup.sh
 
 # configure main.py to run on boot
 #echo 'python3 /home/pi/MeltStake/main.py -d $ARG1 -m deploy &

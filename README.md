@@ -8,7 +8,7 @@ The simplest installation method is via git:
 - `cd ~/`
 - `git clone https://github.com/noahaosman/MeltStake`
 - `cd MeltStake`
-- `sudo bash setup.sh '00'  # replace '00' with the melt stake number`
+- `sudo bash setup.sh '00'  # replace '00' with the melt stake ID number`
 
 # Standard Operating Procedure
 For long-term deployment, hand-load melt stake onto Walrus (delivery ROV). SSH into Walrus (`pi@192.168.1.3`(?) psk:`companion`) and navigate to `/home/pi/nav`. Run `tail -f unicast.txt` to monitor any me3ssages recieved from the melt stake. Run 

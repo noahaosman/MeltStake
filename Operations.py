@@ -15,7 +15,7 @@ class Operations:
         if args.mode == 'debug':
             self.speed = 0.2
         else:
-            self.speed = 0.8
+            self.speed = 0.6
 
 
     def DRILL(self, motors, target_turns):  
@@ -115,8 +115,9 @@ class Operations:
                            for data_point in data_list]
                 msg = data_req + " " + ' '.join(str_dat)
                 beacon.Transmit_Message(msg)  # transmit requested data
-            except Exception:
+            except Exception as e:
                 logging.info("Data transmission failed")
+                logging.info(e)
                 pass
 
         return

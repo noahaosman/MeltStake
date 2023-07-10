@@ -9,7 +9,8 @@ import subprocess
 import re
 
 import Devices
-import data_storage as data
+# import data_storage as data
+from data_storage import Data
 from Operations import Operations
 
 
@@ -28,6 +29,7 @@ if __name__ == "__main__":
     battery = Devices.ADC()
     motors = [Devices.Motor(0), Devices.Motor(1)]  # Hardware supports up to 3 motors
     light = Devices.SubLight()
+    data = Data()
 
     print("opening threads...")
     t_ARMED = []
