@@ -3,10 +3,11 @@ import time
 from threading import Thread
 import numpy as np
 import logging
-import ms5837
 import traceback
+import ms5837
 import os
 import re
+from datetime import datetime, timezone
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
@@ -75,24 +76,43 @@ class Operations:
         # it will try to release 10 times, then give up.
         self.OFF(motors)
 
-        Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
-        bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
-        PTsensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))  
+        def read_n_to_last_line(filename, n = 1):
+            """Returns the nth before last line of a file (n=1 gives last line)"""
+            num_newlines = 0
+            with open(filename, 'rb') as f:
+                try:
+                    f.seek(-2, os.SEEK_END)    
+                    while num_newlines < n:
+                        f.seek(-2, os.SEEK_CUR)
+                        if f.read(1) == b'\n':
+                            num_newlines += 1
+                except OSError:
+                    f.seek(0)
+                last_line = f.readline().decode()
+            return last_line
+        
+        lastPreads = [[None,None],[None,None]]
+        for i in [0,1]:
+            data = read_n_to_last_line('/home/pi/data/Pressure.dat', n = i+1)
+            data = data.split()
+            lastPreads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
+            lastPreads[i][1] = float(data[1])
 
-        if not PTsensor.init():
+        time_between_Preads = (lastPreads[1][0] - lastPreads[0][0]).total_seconds()
+
+        dt = datetime.now(timezone.utc).isoformat(timespec='milliseconds')
+        time_since_last_Pread = (dt - lastPreads[0][0]).total_seconds()
+
+        if time_since_last_Pread < 1 or time_between_Preads > 0.25:
             Pread = False
-            P0 = 1
-            P1 = 1
+            depth = 2
+            velocity = 0
         else:
-            print("Pressure sensor initialized")
             Pread = True
-            PTsensor.read()
-            P0 = PTsensor.pressure(ms5837.UNITS_atm)
-            time.sleep(0.25)
-            PTsensor.read()
-            P1 = PTsensor.pressure(ms5837.UNITS_atm)
+            P0 = lastPreads[1][1]
+            P1 = lastPreads[0][1]
             depth = (P0+P1)/2
-            velocity = (P1-P0)/0.25
+            velocity = (P1-P0)/time_between_Preads
             print("  depth: "+str(depth))
             print("  velocity: "+str(velocity))
 
@@ -100,9 +120,9 @@ class Operations:
         while ((depth > 1.05 and velocity < 0.001) or not Pread) and attempts <= 10: 
             self.DRILL(motors, [-50, -50])
             print("Drilling out 50 ...")
-            time.sleep(15)
-            if attempts > 0:
-                self.DRILL(motors, [3, 3])
+            time.sleep(60)
+            if attempts > 0: # try to reverse if stuck
+                self.DRILL(motors, [5, 5])
                 print("Drilling in 3 ...")
                 time.sleep(3)
             attempts = attempts + 1

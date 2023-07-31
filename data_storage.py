@@ -105,19 +105,19 @@ class Data:
 
         Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
         bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
-        self.PTsensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))      
+        sensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))      
 
-        if not self.PTsensor.init():  # initialize sensor
+        if not sensor.init():  # initialize sensor
             logging.info("Pressure sensor could not be initialized")
             exit(1)
-        if not self.PTsensor.read():  # Check we can read from sensor
+        if not sensor.read():  # Check we can read from sensor
             logging.info("Pressure sensor read failed!")
             exit(1)
 
         while True:
             time.sleep(1/sample_rate)
-            self.PTsensor.read()
-            P = self.PTsensor.pressure(ms5837.UNITS_atm)
-            T = self.PTsensor.temperature(ms5837.UNITS_Centigrade)
+            sensor.read()
+            P = sensor.pressure(ms5837.UNITS_atm)
+            T = sensor.temperature(ms5837.UNITS_Centigrade)
             self.PT = [P, T]
             self.WriteToFile( self.PT )

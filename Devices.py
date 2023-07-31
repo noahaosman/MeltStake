@@ -45,7 +45,7 @@ class ADC:
 
     def __init__(
         self,
-        over_current_pause_time=30,  # time between drill attempts
+        over_current_pause_time=1,  # time between drill attempts
         current_limit=14,
         voltage_limit=13.5
     ):
