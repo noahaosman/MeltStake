@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     time.sleep(1)
 
-    def blink_LED2(self):
+    def blink_LED2():
         # blink LED 2
         led2 = DigitalInOut(board.D25)
         led2.direction = Direction.OUTPUT
