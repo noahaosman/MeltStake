@@ -80,9 +80,6 @@ if __name__ == "__main__":
                 elif command == 'DATA':
                     commands.DATA(data, beacon, arguments)
 
-                elif command == 'RELEASE':
-                    commands.RELEASE(motors, data, arguments)
-
                 elif command == 'LIGHT':
                     flt_in = float(arguments[0])
                     light.AdjustBrightness(flt_in/100)

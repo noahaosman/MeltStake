@@ -5,6 +5,7 @@ import numpy as np
 import logging
 import ms5837
 import traceback
+import os
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
@@ -65,7 +66,7 @@ class Operations:
         self.OFF(motors)
         return
 
-    def RELEASE(self, motors, data, arguments=None):  
+    def RELEASE(self, motors, arguments=None):  
         # release unit from ice (note: approx 36 rotations for length of ice screw)
         # this function will first take a measure of the pressure, then if both
         #    1) depth is greater than 0.5 meters
@@ -73,14 +74,24 @@ class Operations:
         # it will try to release 10 times, then give up.
         self.OFF(motors)
 
-        data.PTsensor.read()
-        P0 = data.PTsensor.pressure(ms5837.UNITS_atm)
-        time.sleep(0.25)
-        data.PTsensor.read()
-        P1 = data.PTsensor.pressure(ms5837.UNITS_atm)
+        Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
+        bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
+        PTsensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))  
+
+        if not PTsensor.init():
+            Pread = False
+            P0 = 1
+            P1 = 1
+        else:
+            Pread = True
+            PTsensor.read()
+            P0 = PTsensor.pressure(ms5837.UNITS_atm)
+            time.sleep(0.25)
+            PTsensor.read()
+            P1 = PTsensor.pressure(ms5837.UNITS_atm)
 
         attempts = 0
-        while P1 > 1.05 and (P1-P0)/0.25 < 0.001 and attempts < 10: 
+        while ((P1 > 1.05 and (P1-P0)/0.25 < 0.001) or not Pread) and attempts <= 10: 
             self.DRILL(motors, [-50, -50])
             time.sleep(1)
             self.DRILL(motors, [3, 3])
