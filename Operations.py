@@ -84,19 +84,27 @@ class Operations:
             P0 = 1
             P1 = 1
         else:
+            print("Pressure sensor initialized")
             Pread = True
             PTsensor.read()
             P0 = PTsensor.pressure(ms5837.UNITS_atm)
             time.sleep(0.25)
             PTsensor.read()
             P1 = PTsensor.pressure(ms5837.UNITS_atm)
+            depth = (P0+P1)/2
+            velocity = (P1-P0)/0.25
+            print("  depth: "+str(depth))
+            print("  velocity: "+str(velocity))
 
         attempts = 0
-        while ((P1 > 1.05 and (P1-P0)/0.25 < 0.001) or not Pread) and attempts <= 10: 
+        while ((depth > 1.05 and velocity < 0.001) or not Pread) and attempts <= 10: 
             self.DRILL(motors, [-50, -50])
-            time.sleep(1)
-            self.DRILL(motors, [3, 3])
-            time.sleep(1)
+            print("Drilling out 50 ...")
+            time.sleep(15)
+            if attempts > 0:
+                self.DRILL(motors, [3, 3])
+                print("Drilling in 3 ...")
+                time.sleep(3)
             attempts = attempts + 1
         return
     
