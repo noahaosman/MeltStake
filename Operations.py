@@ -97,6 +97,7 @@ class Operations:
             data = data.split()
             lastPreads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
             lastPreads[i][1] = float(data[1])
+            time.sleep(1)
             print(data)
 
         time_between_Preads = (lastPreads[1][0] - lastPreads[0][0]).total_seconds()
