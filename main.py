@@ -3,6 +3,7 @@ import logging
 import time
 import argparse
 from threading import Thread
+import traceback
 
 import Devices
 from data_storage import Data
@@ -99,9 +100,9 @@ if __name__ == "__main__":
                 beacon.strmsg = ''
 
 
-        except Exception as e:
+        except Exception:
             logging.info("--- RUNTIME ERROR: ---")
-            logging.info(e)
+            logging.info(traceback.format_exc())
             if args.mode != 'debug':
                 commands.RELEASE(motors)  # release device from ice face
             break

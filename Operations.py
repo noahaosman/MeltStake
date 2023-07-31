@@ -4,6 +4,7 @@ from threading import Thread
 import numpy as np
 import logging
 import ms5837
+import traceback
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
@@ -136,7 +137,7 @@ class Operations:
                 beacon.Transmit_Message(msg)  # transmit requested data
             except Exception as e:
                 logging.info("Data transmission failed")
-                logging.info(e)
+                logging.info(traceback.format_exc())
                 pass
 
         return
