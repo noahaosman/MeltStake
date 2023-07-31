@@ -100,7 +100,7 @@ class Operations:
 
         time_between_Preads = (lastPreads[1][0] - lastPreads[0][0]).total_seconds()
 
-        dt = datetime.now(timezone.utc).isoformat(timespec='milliseconds')
+        dt = datetime.now()
         time_since_last_Pread = (dt - lastPreads[0][0]).total_seconds()
 
         if time_since_last_Pread < 1 or time_between_Preads > 0.25:
