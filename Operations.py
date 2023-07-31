@@ -93,23 +93,22 @@ class Operations:
         
         lastPreads = [[None,None],[None,None]]
         for i in [0,1]:
-            data = read_n_to_last_line('/home/pi/data/Pressure.dat', n = i+1)
+            data = read_n_to_last_line('/home/pi/data/Pressure.dat', n = i*5+1)
             data = data.split()
             lastPreads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
             lastPreads[i][1] = float(data[1])
-            time.sleep(1)
             print(data)
 
-        time_between_Preads = (lastPreads[1][0] - lastPreads[0][0]).total_seconds()
+        time_between_Preads = (lastPreads[0][0] - lastPreads[1][0]).total_seconds()
 
         dt = datetime.now()
-        time_since_last_Pread = (dt - lastPreads[0][0]).total_seconds()
+        time_since_last_Pread = (dt - lastPreads[1][0]).total_seconds()
 
 
         print("  time_since_last_Pread: "+str(time_since_last_Pread))
         print("  time_between_Preads: "+str(time_between_Preads))
 
-        if time_since_last_Pread < 1 or time_between_Preads > 0.25:
+        if time_since_last_Pread > 1 or time_between_Preads > 0.25:
             Pread = False
             depth = 2
             velocity = 0
