@@ -26,8 +26,8 @@ class Operations:
 
     def DRILL(self, motors, target_turns):  
         # Power each motor for the specified # of turns. Negative for CCW, Positive for CW.
-        
-        # clean up input:
+         
+        # clean up input: 
         target_turns = [int(str_in) for str_in in target_turns]  # convert string input to int
         target_turns.extend([0] * (len(motors) - len(target_turns)))  # pad end with 0's if input was less than number of motors
         target_turns = target_turns[0:len(motors)]  # remove extra elements if larger than the number of motors
