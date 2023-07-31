@@ -108,7 +108,8 @@ class Operations:
         print("  time_since_last_Pread: "+str(time_since_last_Pread))
         print("  time_between_Preads: "+str(time_between_Preads))
 
-        if time_since_last_Pread > 1 or time_between_Preads > 0.25:
+        if time_since_last_Pread > 1 or time_between_Preads > 5:
+            # bad pressure reading, assume we're at depth
             Pread = False
             depth = 2
             velocity = 0
@@ -131,6 +132,7 @@ class Operations:
                 print("Drilling in 3 ...")
                 time.sleep(3)
             attempts = attempts + 1
+        print("exiting release call ... ")
         return
     
     def OFF(self, motors):  
