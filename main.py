@@ -4,6 +4,8 @@ import time
 import argparse
 from threading import Thread
 import traceback
+import board
+from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 
 import Devices
 from data_storage import Data
@@ -54,6 +56,18 @@ if __name__ == "__main__":
     print(known_commands)
 
     time.sleep(1)
+
+    def blink_LED2(self):
+        # blink LED 2
+        led2 = DigitalInOut(board.D25)
+        led2.direction = Direction.OUTPUT
+        while True:
+            led2.value = True
+            time.sleep(1)
+            led2.value = False
+            time.sleep(0.5)
+    Thread(daemon=True, target=blink_LED2).start()
+
 
     # MAIN LOOP:
     while not battery.under_voltage:

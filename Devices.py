@@ -323,6 +323,7 @@ class ImuMag:
         
 
 class Beacon:
+    
 
     def __init__(self):
         self.strmsg = ''
