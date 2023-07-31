@@ -2,14 +2,9 @@
 import logging
 import time
 import argparse
-import numpy as np
 from threading import Thread
-import os
-import subprocess
-import re
 
 import Devices
-# import data_storage as data
 from data_storage import Data
 from Operations import Operations
 
@@ -83,6 +78,9 @@ if __name__ == "__main__":
 
                 elif command == 'DATA':
                     commands.DATA(data, beacon, arguments)
+
+                elif command == 'RELEASE':
+                    commands.RELEASE(motors, data, arguments)
 
                 elif command == 'LIGHT':
                     flt_in = float(arguments[0])

@@ -1,7 +1,9 @@
+# pyright: reportMissingImports=false
 import time
 from threading import Thread
 import numpy as np
 import logging
+import ms5837
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
@@ -62,10 +64,27 @@ class Operations:
         self.OFF(motors)
         return
 
-    def RELEASE(self, motors, arguments=None):  
-        # release unit from ice (~36 rotations for length of ice screw)
+    def RELEASE(self, motors, data, arguments=None):  
+        # release unit from ice (note: approx 36 rotations for length of ice screw)
+        # this function will first take a measure of the pressure, then if both
+        #    1) depth is greater than 0.5 meters
+        #    2) rate of change of depth is less than 0.1 m/s (i.e. meltstake is not rising)
+        # it will try to release 10 times, then give up.
         self.OFF(motors)
-        self.DRILL(motors, [-50, -50, -50])
+
+        data.PTsensor.read()
+        P0 = data.PTsensor.pressure(ms5837.UNITS_atm)
+        time.sleep(0.25)
+        data.PTsensor.read()
+        P1 = data.PTsensor.pressure(ms5837.UNITS_atm)
+
+        attempts = 0
+        while P1 > 1.05 and (P1-P0)/0.25 < 0.001 and attempts < 10: 
+            self.DRILL(motors, [-50, -50])
+            time.sleep(1)
+            self.DRILL(motors, [3, 3])
+            time.sleep(1)
+            attempts = attempts + 1
         return
     
     def OFF(self, motors):  

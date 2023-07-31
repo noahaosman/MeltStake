@@ -2,17 +2,15 @@
 import os
 import re
 from Clock_Speed import CLK_SPD
-import busio
 import board
+from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 from adafruit_extended_bus import ExtendedI2C as I2C
 import time
-from datetime import datetime, timezone
 import numpy as np
 from threading import Thread
 from adafruit_pca9685 import PCA9685  # PCA9685 module (PWM driver)
 import adafruit_ads1x15.ads1115 as ADS  # ADS1115 module (ADC)
 from adafruit_ads1x15.analog_in import AnalogIn
-from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 from math import sin, cos, asin, atan2, sqrt, pi
 import socket
 from icm20602 import ICM20602
@@ -183,9 +181,9 @@ class Motor:
             pin_state = pin.value
             if pin_state == 0 and prior_pin_state == 1:
                 self.pulses = self.pulses + 1
-                time.sleep(0.15)  # debounce timer
+                time.sleep(0.1)  # debounce timer (at max speed approx 0.3s per rotation)
             prior_pin_state = pin_state
-            time.sleep(0.01)
+            time.sleep(0.000001)
         return
 
 class SubLight:
@@ -352,13 +350,15 @@ class Beacon:
             s.connect((HOST, PORT))
             fullmsg = '106 RE: ' + msg
             s.send(fullmsg.encode())
+            s.close()
 
             # hotfix for sending responses to laptop beacon. Should be able to just tell ID of pinging beacon?
             time.sleep(0.5) 
+            s.connect((HOST, PORT))
             fullmsg = '203 RE: ' + msg
             s.send(fullmsg.encode())
-
             s.close()
+            
             logging.info(fullmsg)
         except Exception:
             logging.info("ERROR transmitting message: " + msg)

@@ -7,7 +7,3 @@ CLK_SPD = {
     '04' : 25000000, # needs tuning
 }
 
-# MS - 02:
-# motor 0 : 2.45
-# motor 1 : 2.45
-

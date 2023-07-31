@@ -19,10 +19,17 @@ echo "$IP_LINE" >> "$IP_FILE"
 # Setup RTC
 wget https://raw.githubusercontent.com/raspberrypi/linux/rpi-4.14.y/arch/arm/boot/dts/overlays/i2c-rtc-gpio-overlay.dts
 dtc -I dts -O dtb -o i2c-rtc-gpio.dtbo i2c-rtc-gpio-overlay.dts
-sudo cp i2c-rtc-gpio.dtbo /boot/overlays
-sudo rm i2c*
-sudo timedatectl set-timezone UTC
+cp i2c-rtc-gpio.dtbo /boot/overlays
+rm i2c*
+timedatectl set-timezone UTC
+
+apt -y remove fake-hwclock
+update-rc.d -f fake-hwclock remove
+sed -i '/systemd/,+2 d' /lib/udev/hwclock-set
+hwclock -r  # reads hwclock time
+hwclock -w  # sets hwclock to the current system time
 # on initial boot set to current time eg: sudo date -u -s '22 Jun 2023 18:34:00' 
+# timedatectl shows system time and hwclock time
 
 
 # Configure interfacing options
@@ -38,6 +45,12 @@ dtoverlay=i2c-rtc-gpio,ds3231,i2c_gpio_sda=22,i2c_gpio_scl=23
 EOM
 echo "$INTERFACE_LINE" >> "$INTERFACE_FILE"
 echo "i2c-dev" >> /etc/modules
+
+# enable hardware serial port
+raspi-config nonint do_serial 2
+
+# enable i2c
+raspi-config nonint do_i2c 0
 
 
 
@@ -116,7 +129,32 @@ python3 setup.py install --user
 # install camera code
 git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git
 bash /home/pi/camera_capture/setup.sh
+apt-get install -y mpv # this package lets you view video in terminal over ssh (bad quality!!) mpv --no-config --vo=tct <video file>
 
 # configure main.py to run on boot
-#echo 'python3 /home/pi/MeltStake/main.py -d $ARG1 -m deploy &
+#echo 'python3 /home/pi/MeltStake/main.py -d $ARG1 -m deploy & 
 #exit 0' >> /etc/rc.local
+
+
+
+
+# to create sytstemctl things:
+# create a file /etc/systemd/system/<____>.service
+# populate with:
+      # [Unit]
+      # Description=<short description here>
+
+      # [Service]
+      # Type=simple
+      # WorkingDirectory=/home/pi/<directory>
+      # User=pi
+      # StandardOutput=syslog
+      # StandardError=syslog
+      # SyslogIdentifier=<____>
+      # ExecStart=/home/pi/<directory>/<____>.py
+      # Restart=on-failure
+      # RestartSec=<restart time>
+
+      # [Install]
+      # WantedBy=multi-user.target
+# run sudo systemctl enable <____>
