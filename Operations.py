@@ -6,6 +6,7 @@ import logging
 import ms5837
 import traceback
 import os
+import re
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
