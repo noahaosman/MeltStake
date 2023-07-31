@@ -70,11 +70,10 @@ class Operations:
 
     def RELEASE(self, motors, arguments=None):  
         # release unit from ice (note: approx 36 rotations for length of ice screw)
-        # this function will first take a measure of the pressure, then if both
+        # this function will first read most recent pressure measurements, then if both
         #    1) depth is greater than 0.5 meters
         #    2) rate of change of depth is less than 0.1 m/s (i.e. meltstake is not rising)
         # it will try to release 10 times, then give up.
-        self.OFF(motors)
 
         def read_n_to_last_line(filename, n = 1):
             """Returns the nth before last line of a file (n=1 gives last line)"""
@@ -91,48 +90,46 @@ class Operations:
                 last_line = f.readline().decode()
             return last_line
         
-        lastPreads = [[None,None],[None,None]]
-        for i in [0,1]:
-            data = read_n_to_last_line('/home/pi/data/Pressure.dat', n = i*5+1)
-            data = data.split()
-            lastPreads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
-            lastPreads[i][1] = float(data[1])
-            print(data)
-
-        time_between_Preads = (lastPreads[0][0] - lastPreads[1][0]).total_seconds()
-
-        dt = datetime.now()
-        time_since_last_Pread = (dt - lastPreads[1][0]).total_seconds()
-
-
-        print("  time_since_last_Pread: "+str(time_since_last_Pread))
-        print("  time_between_Preads: "+str(time_between_Preads))
-
-        if time_since_last_Pread > 1 or time_between_Preads > 5:
-            # bad pressure reading, assume we're at depth
-            Pread = False
-            depth = 2
-            velocity = 0
-        else:
-            Pread = True
-            P0 = lastPreads[1][1]
-            P1 = lastPreads[0][1]
-            depth = (P0+P1)/2
-            velocity = (P1-P0)/time_between_Preads
-            print("  depth: "+str(depth))
-            print("  velocity: "+str(velocity))
+        self.OFF(motors)
 
         attempts = 0
-        while ((depth > 1.05 and velocity < 0.001) or not Pread) and attempts <= 10: 
-            self.DRILL(motors, [-50, -50])
-            print("Drilling out 50 ...")
-            time.sleep(60)
-            if attempts > 0: # try to reverse if stuck
-                self.DRILL(motors, [5, 5])
-                print("Drilling in 3 ...")
-                time.sleep(3)
+        while attempts <= 10:
+
+            lastPreads = [[None,None],[None,None]]
+            for i in [0,1]:
+                data = read_n_to_last_line('/home/pi/data/Pressure.dat', n = i*2+2)
+                data = data.split()
+                lastPreads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
+                lastPreads[i][1] = float(data[1])
+                print(data)
+
+            dt = datetime.now()
+            time_since_last_Pread = (dt - lastPreads[1][0]).total_seconds()
+            time_between_Preads = (lastPreads[0][0] - lastPreads[1][0]).total_seconds()
+
+            if time_since_last_Pread > 1 or time_between_Preads > 5:
+                # bad pressure reading, assume we're at depth
+                Pread = False
+                depth = 2
+                velocity = 0
+                logging.info("Bad pressure reading")
+            else:
+                Pread = True
+                P0 = lastPreads[1][1]
+                P1 = lastPreads[0][1]
+                depth = (P0+P1)/2
+                velocity = (P1-P0)/time_between_Preads
+
+            # if we're in the ice, try to drill out
+            if ((depth > 1.05 and velocity < 0.001) or not Pread): 
+                logging.info("RELEASE loop "+str(attempts+1)+"/10")
+                self.DRILL(motors, [-50, -50])
+                if attempts > 0: # try to reverse in if it seems like we're stuck
+                    self.DRILL(motors, [5, 5])
+            else:
+                break
+
             attempts = attempts + 1
-        print("exiting release call ... ")
         return
     
     def OFF(self, motors):  
