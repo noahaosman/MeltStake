@@ -182,7 +182,7 @@ class Motor:
             iteration = 0
             pin_state_sum = 0
             while iteration < 1000:
-                time.sleep(0.000001)
+                time.sleep(0.00000001)
                 pin_state_sum = pin_state_sum + pin.value
                 iteration = iteration+1
             pin_state = pin_state_sum/1000
