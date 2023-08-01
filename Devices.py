@@ -212,11 +212,11 @@ class Motor:
 
             input = pin.value
 
-            if input == 0:
+            if input == 1:
                 if integrator > 0:
                     integrator = integrator - 1
-                elif integrator < MAXIMUM:
-                    integrator = integrator + 1
+            elif integrator < MAXIMUM:
+                integrator = integrator + 1
 
             if integrator == 0:
                 output = 0
