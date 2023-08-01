@@ -176,6 +176,8 @@ class Motor:
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 
+        print('hey')
+
         prior_pin_state = pin.value
         while True:
             time.sleep(0.000001)
