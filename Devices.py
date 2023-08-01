@@ -21,6 +21,15 @@ logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
 i2c_bus4 = I2C(4)
+PWM_OE = DigitalInOut(board.D26)
+PWM_OE.direction = Direction.OUTPUT
+PWM_OE.value = True  # disarmed
+# delay arming motors in order to prevent jitter on startup.
+def delay_arming():
+    time.sleep(3)
+    PWM_OE.value = False  # armed
+Thread(target=delay_arming).start()
+
 
 # get device number from static IP
 try:

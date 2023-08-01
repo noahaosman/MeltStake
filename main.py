@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # pyright: reportMissingImports=false
+import os
 import time
 import argparse
 import traceback
-import sys
-sys.path.append('/home/pi/MeltStake')
+import board
+from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 import meltstake
 
 # parse arguements

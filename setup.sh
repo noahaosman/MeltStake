@@ -108,23 +108,23 @@ mkdir /home/pi/packages
 # Install software for IMU/Magnetometer on Navigator
 git clone https://github.com/bluerobotics/icm20602-python /home/pi/packages/icm20602-python
 cd /home/pi/packages/icm20602-python
-python3 setup.py install --user
+python3 setup.py install
 git clone https://github.com/bluerobotics/mmc5983-python /home/pi/packages/mmc5983-python
 cd /home/pi/packages/mmc5983-python
-python3 setup.py install --user
+python3 setup.py install
 git clone https://github.com/bluerobotics/llog-python /home/pi/packages/llog-python
 cd /home/pi/packages/llog-python
-python3 setup.py install --user
+python3 setup.py install
 
 # Install Blue Robotics Bar30 pressure/temperature sensor software
 git clone https://github.com/bluerobotics/ms5837-python /home/pi/packages/ms5837-python
 cd /home/pi/packages/ms5837-python
-python3 setup.py install --user
+python3 setup.py install
 
 # Install Blue Robotics ping sonar software
 git clone --single-branch --branch deployment https://github.com/bluerobotics/ping-python.git /home/pi/packages/ping-python
 cd /home/pi/packages/ping-python
-python3 setup.py install --user
+python3 setup.py install
 
 # install camera code
 git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git
@@ -151,8 +151,6 @@ StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=$SyslogIdentifier
 ExecStart=/home/pi/MeltStake/ServiceScripts/$SyslogIdentifier.py
-Restart=on-failure
-RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

@@ -131,7 +131,7 @@ class Operations:
 
             attempts = attempts + 1
         return
-    
+
     def OFF(self, motors):  
         # set all motors to zero speed
         self.disarm = True
