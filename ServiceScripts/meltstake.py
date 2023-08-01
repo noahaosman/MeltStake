@@ -5,7 +5,7 @@ import argparse
 import traceback
 import sys
 sys.path.append('/home/pi/MeltStake')
-from MeltStake.main import main
+from .. import main
 
 # parse arguements
 argParser = argparse.ArgumentParser()
