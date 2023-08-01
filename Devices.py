@@ -186,6 +186,8 @@ class Motor:
                 pin_state_sum = pin_state_sum + pin.value
             pin_state = pin_state_sum/100
 
+            print(pin_state)
+
             if pin_state < 0.01 or pin_state > 0.99:
                 if pin_state < 0.01:
                     pin_state = False
