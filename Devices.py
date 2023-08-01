@@ -187,10 +187,10 @@ class Motor:
                 iteration = iteration+1
             pin_state = pin_state_sum/100
 
-            if pin_state < 0.01 or pin_state > 0.99:
-                if pin_state < 0.01:
+            if pin_state < 0.05 or pin_state > 0.95:
+                if pin_state < 0.05:
                     pin_state = False
-                elif pin_state > 0.99:
+                elif pin_state > 0.95:
                     pin_state = True
 
                 if pin_state == True and prior_pin_state == False: # falling
