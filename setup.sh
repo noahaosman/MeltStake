@@ -133,7 +133,7 @@ apt-get install -y mpv # this package lets you view video in terminal over ssh (
 
 
 # Service Scripts:
-scripts='heartbeat LeakDetection'
+scripts='heartbeat LeakDetection ArmPWM'
 
 for SyslogIdentifier in $scripts
 do
@@ -157,11 +157,29 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOM
-
 echo "$SERVICE_LINE" > "$SERVICE_FILE"
-
 chmod +x /home/pi/MeltStake/ServiceScripts/$SyslogIdentifier.py
-
 systemctl enable $SyslogIdentifier
 done
 
+
+SERVICE_FILE="/etc/systemd/system/meltstake.service"
+echo -n "" > $SERVICE_FILE
+read -r -d '' SERVICE_LINE << EOM
+[Unit]
+Description=run primary meltstake loop
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/MeltStake
+User=pi
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=meltstake
+ExecStart=/home/pi/MeltStake/main.py
+
+[Install]
+WantedBy=multi-user.target
+EOM
+echo "$SERVICE_LINE" > "$SERVICE_FILE"
+chmod +x /home/pi/MeltStake/main.py

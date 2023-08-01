@@ -21,9 +21,6 @@ logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
 i2c_bus4 = I2C(4)
-PWM_OE = DigitalInOut(board.D26)
-PWM_OE.direction = Direction.OUTPUT
-PWM_OE.value = False  # armed
 
 # get device number from static IP
 try:
@@ -52,8 +49,7 @@ class LeakDetection:
         while True:
             with open('/home/pi/MeltStake/LeakState.txt', "r") as f: 
                 self.State = eval(f.readline())
-            time.sleep(5)
-            print(self.State)
+            time.sleep(0.25)
 
 
 class ADC:
