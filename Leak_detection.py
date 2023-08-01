@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+# pyright: reportMissingImports=false
+import board
+from digitalio import DigitalInOut, Direction, Pull  # GPIO module
+import time
+
+# init LED GPIO
+led = DigitalInOut(board.D11)
+led.direction = Direction.OUTPUT
+led.value = False
+
+# init Leak sensor GPIO
+leak = DigitalInOut(board.D27)
+leak.direction = Direction.INPUT
+
+
+while leak.value == False:
+    time.sleep(0.25)
+
+print("!!! LEAK DETECTED !!!")
+
+# blink LED 3
+while True:
+    led.value = True
+    time.sleep(1)
+    led.value = False
+    time.sleep(0.5)
+
+    

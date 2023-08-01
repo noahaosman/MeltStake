@@ -13,7 +13,7 @@ import re
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
-startup_delay = 3
+startup_delay = 2
 
 
 class Data:

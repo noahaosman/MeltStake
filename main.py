@@ -55,10 +55,7 @@ if __name__ == "__main__":
                       callable(getattr(commands, attribute)) and attribute.startswith('__') is False]
     print(known_commands)
 
-    time.sleep(1)
-
     def blink_LED2():
-        # blink LED 2
         led2 = DigitalInOut(board.D25)
         led2.direction = Direction.OUTPUT
         while True:
@@ -67,7 +64,6 @@ if __name__ == "__main__":
             led2.value = False
             time.sleep(0.5)
     Thread(daemon=True, target=blink_LED2).start()
-
 
     # MAIN LOOP:
     while not battery.under_voltage:

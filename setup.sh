@@ -158,3 +158,6 @@ apt-get install -y mpv # this package lets you view video in terminal over ssh (
       # [Install]
       # WantedBy=multi-user.target
 # run sudo systemctl enable <____>
+# you also may need to make the script into an executable:
+#    add #!/usr/bin/env python3 to the top of the script
+#    chmod -x <____>.py
