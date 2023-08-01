@@ -138,7 +138,8 @@ scripts='heartbeat LeakDetection'
 for SyslogIdentifier in $scripts
 do
 SERVICE_FILE="/etc/systemd/system/$SyslogIdentifier.service"
-read -r -d '' WPA_LINE << EOM
+echo -n "" > $SERVICE_FILE
+read -r -d '' SERVICE_LINE << EOM
 [Unit]
 Description=$SyslogIdentifier
 
@@ -157,7 +158,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOM
 
-echo "$WPA_LINE" > "$WPA_FILE"
+echo "$SERVICE_LINE" > "$WPA_FILE"
 
 chmod +x /home/pi/MeltStake/ServiceScripts/$SyslogIdentifier.py
 done
