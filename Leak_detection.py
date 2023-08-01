@@ -17,13 +17,13 @@ leak.direction = Direction.INPUT
 while leak.value == False:
     time.sleep(0.25)
 
-print("!!! LEAK DETECTED !!!")
+with open('/home/pi/Meltstake/Leak_State.txt', "w") as f:  
+    # write new data line
+    f.write("True")
 
 # blink LED 3
 while True:
     led.value = False
-    time.sleep(0.25)
+    time.sleep(0.1)
     led.value = True
-    time.sleep(0.25)
-
-    
+    time.sleep(0.1)
