@@ -185,7 +185,7 @@ class Motor:
                 time.sleep(0.000001)
                 pin_state_sum = pin_state_sum + pin.value
                 iteration = iteration+1
-            pin_state = pin_state_sum/100
+            pin_state = pin_state_sum/1000
 
             print(pin_state)
 
