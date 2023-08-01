@@ -12,6 +12,7 @@ led.value = True
 # init Leak sensor GPIO
 leak = DigitalInOut(board.D27)
 leak.direction = Direction.INPUT
+leak.pull = Pull.PULLDOWN
 
 
 while leak.value == False:
