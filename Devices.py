@@ -170,9 +170,9 @@ class Motor:
     
     def count_pulses(self):
         if self.motor_no == 0:
-            pin = DigitalInOut(board.D4)
-        else:
             pin = DigitalInOut(board.D5)
+        else:
+            pin = DigitalInOut(board.D4)
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 
@@ -180,7 +180,6 @@ class Motor:
         while True:
             time.sleep(0.000001)
             pin_state = pin.value
-            print(str(pin_state)+"   "+str(prior_pin_state))
             if pin_state == True and prior_pin_state == False: # falling
                 self.pulses = self.pulses + 1
                 print(self.pulses)
