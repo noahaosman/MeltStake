@@ -189,6 +189,16 @@ class Motor:
         return max(min(upr, inp), lwr)
     
     def count_pulses(self):
+        # debounce code based on debounce.c written by Kenneth A. Kuhn
+
+        DEBOUNCE_TIME = 0.3
+        SAMPLE_FREQUENCY = 100
+        MAXIMUM = DEBOUNCE_TIME * SAMPLE_FREQUENCY
+
+        integrator = 0
+        output = 0
+        prior_output = 0
+
         if self.motor_no == 0:
             pin = DigitalInOut(board.D5)
         else:
@@ -196,28 +206,28 @@ class Motor:
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 
-        prior_pin_state = pin.value
+
         while True:
+            time.sleep(1/SAMPLE_FREQUENCY)
 
-            iteration = 0
-            pin_state_sum = 0
-            while iteration < 10:
-                time.sleep(0.00001)
-                pin_state_sum = pin_state_sum + pin.value
-                iteration = iteration+1
-            pin_state = pin_state_sum/10
+            input = pin.value
 
-            if pin_state <= 0.1 or pin_state >= 0.9:
-                if pin_state <= 0.1:
-                    pin_state = False
-                elif pin_state >= 0.9:
-                    pin_state = True
+            if input == 0:
+                if integrator > 0:
+                    integrator = integrator - 1
+                elif integrator < MAXIMUM:
+                    integrator = integrator + 1
 
-                if pin_state == True and prior_pin_state == False: # falling
-                    self.pulses = self.pulses + 1
-                    # time.sleep(0.1)  # debounce timer (at max speed approx 0.3s per rotation)
-                prior_pin_state = pin_state
-        return
+            if integrator == 0:
+                output = 0
+            elif integrator >= MAXIMUM:
+                output = 1
+                integrator = MAXIMUM
+
+            if output == 1 and prior_output == 0:
+                self.pulses = self.pulses + 1
+            
+            prior_output = output
 
     # count actuator feedback pulses
     def updatePosition(self):

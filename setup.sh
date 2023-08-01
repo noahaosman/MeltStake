@@ -101,6 +101,7 @@ pip3 install jinja2
 pip3 install matplotlib
 pip3 install pypdf2
 apt-get install -y python3-smbus2
+pip install smbus2
 
 mkdir /home/pi/data
 mkdir /home/pi/packages
