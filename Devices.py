@@ -176,15 +176,28 @@ class Motor:
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 
-        prior_pin_state = 1
+        prior_pin_state = pin.value
         while True:
-            pin_state = pin.value
-            if pin_state == 0 and prior_pin_state == 1:
-                self.pulses = self.pulses + 1
-                time.sleep(0.1)  # debounce timer (at max speed approx 0.3s per rotation)
-            prior_pin_state = pin_state
             time.sleep(0.000001)
+            pin_state = pin.value
+            if pin_state == True and prior_pin_state == False: # falling
+                self.pulses = self.pulses + 1
+                # time.sleep(0.1)  # debounce timer (at max speed approx 0.3s per rotation)
+            prior_pin_state = pin_state
         return
+
+    # count actuator feedback pulses
+    def updatePosition(self):
+        prior_feedback_val = self.feedback.value
+        while True:
+            time.sleep(0.000001)
+            current_feedback_value = self.feedback.value
+            if current_feedback_value == False and prior_feedback_val == True:
+                self.position = self.position + 1
+            prior_feedback_val = current_feedback_value
+
+
+
 
 class SubLight:
 
