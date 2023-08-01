@@ -51,7 +51,8 @@ class LeakDetection:
         with open('/home/pi/MeltStake/LeakState.txt', "r") as f:  
             while True:
                 self.State = eval(f.readline())
-                time.sleep(0.25)
+                time.sleep(5)
+                print(self.State)
 
 
 

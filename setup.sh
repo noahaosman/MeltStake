@@ -158,8 +158,10 @@ RestartSec=10
 WantedBy=multi-user.target
 EOM
 
-echo "$SERVICE_LINE" > "$WPA_FILE"
+echo "$SERVICE_LINE" > "$SERVICE_FILE"
 
 chmod +x /home/pi/MeltStake/ServiceScripts/$SyslogIdentifier.py
+
+systemctl enable $SyslogIdentifier
 done
 
