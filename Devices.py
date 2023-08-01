@@ -212,7 +212,7 @@ class Motor:
 
             input = pin.value
 
-            if input == 1:
+            if input == 0:
                 if integrator > 0:
                     integrator = integrator - 1
             elif integrator < MAXIMUM:
@@ -227,6 +227,9 @@ class Motor:
             if output == 1 and prior_output == 0:
                 self.pulses = self.pulses + 1
             
+            if self.motor_no == 0:
+                print(output)
+
             prior_output = output
 
     # count actuator feedback pulses
