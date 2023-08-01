@@ -170,9 +170,9 @@ class Motor:
     
     def count_pulses(self):
         if self.motor_no == 0:
-            pin = DigitalInOut(board.D5)
-        else:
             pin = DigitalInOut(board.D4)
+        else:
+            pin = DigitalInOut(board.D5)
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 
