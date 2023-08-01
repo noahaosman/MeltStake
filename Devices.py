@@ -178,13 +178,25 @@ class Motor:
 
         prior_pin_state = pin.value
         while True:
-            time.sleep(0.000001)
-            pin_state = pin.value
-            if pin_state == True and prior_pin_state == False: # falling
-                self.pulses = self.pulses + 1
-                print(self.pulses)
-                time.sleep(0.1)  # debounce timer (at max speed approx 0.3s per rotation)
-            prior_pin_state = pin_state
+
+            iteration = 0
+            pin_state_sum = 0
+            while iteration < 100:
+                time.sleep(0.000001)
+                pin_state_sum = pin_state_sum + pin.value
+            pin_state = pin_state_sum/100
+
+            if pin_state < 0.01 or pin_state > 0.99:
+                if pin_state < 0.01:
+                    pin_state = False
+                elif pin_state > 0.99:
+                    pin_state = True
+
+                if pin_state == True and prior_pin_state == False: # falling
+                    self.pulses = self.pulses + 1
+                    print(self.pulses)
+                    # time.sleep(0.1)  # debounce timer (at max speed approx 0.3s per rotation)
+                prior_pin_state = pin_state
         return
 
     # count actuator feedback pulses
