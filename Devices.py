@@ -191,8 +191,8 @@ class Motor:
     def count_pulses(self):
         # debounce code based on debounce.c written by Kenneth A. Kuhn
 
-        DEBOUNCE_TIME = 0.3
-        SAMPLE_FREQUENCY = 100
+        DEBOUNCE_TIME = 0.01
+        SAMPLE_FREQUENCY = 1000
         MAXIMUM = DEBOUNCE_TIME * SAMPLE_FREQUENCY
 
         integrator = 0
@@ -226,10 +226,7 @@ class Motor:
 
             if output == 1 and prior_output == 0:
                 self.pulses = self.pulses + 1
-            
-            if self.motor_no == 0:
-                print(output)
-
+                
             prior_output = output
 
     # count actuator feedback pulses
