@@ -184,9 +184,8 @@ class Motor:
             while iteration < 100:
                 time.sleep(0.000001)
                 pin_state_sum = pin_state_sum + pin.value
+                iteration = iteration+1
             pin_state = pin_state_sum/100
-
-            print(pin_state)
 
             if pin_state < 0.01 or pin_state > 0.99:
                 if pin_state < 0.01:
