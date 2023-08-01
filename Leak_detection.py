@@ -7,7 +7,7 @@ import time
 # init LED GPIO
 led = DigitalInOut(board.D11)
 led.direction = Direction.OUTPUT
-led.value = False
+led.value = True
 
 # init Leak sensor GPIO
 leak = DigitalInOut(board.D27)
@@ -21,9 +21,9 @@ print("!!! LEAK DETECTED !!!")
 
 # blink LED 3
 while True:
-    led.value = True
-    time.sleep(1)
     led.value = False
-    time.sleep(0.5)
+    time.sleep(0.25)
+    led.value = True
+    time.sleep(0.25)
 
     
