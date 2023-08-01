@@ -131,33 +131,34 @@ git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.g
 bash /home/pi/camera_capture/setup.sh
 apt-get install -y mpv # this package lets you view video in terminal over ssh (bad quality!!) mpv --no-config --vo=tct <video file>
 
-# configure main.py to run on boot
-#echo 'python3 /home/pi/MeltStake/main.py -d $ARG1 -m deploy & 
-#exit 0' >> /etc/rc.local
 
+# Service Scripts:
+scripts='heartbeat LeakDetection'
 
+for SyslogIdentifier in $scripts
+do
+SERVICE_FILE="/etc/systemd/system/$SyslogIdentifier.service"
+read -r -d '' WPA_LINE << EOM
+[Unit]
+Description=$SyslogIdentifier
 
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/MeltStake/ServiceScripts/
+User=pi
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=$SyslogIdentifier
+ExecStart=/home/pi/MeltStake/ServiceScripts/$SyslogIdentifier.py
+Restart=on-failure
+RestartSec=10
 
-# to create sytstemctl things:
-# create a file /etc/systemd/system/<____>.service
-# populate with:
-      # [Unit]
-      # Description=<short description here>
+[Install]
+WantedBy=multi-user.target
+EOM
 
-      # [Service]
-      # Type=simple
-      # WorkingDirectory=/home/pi/<directory>
-      # User=pi
-      # StandardOutput=syslog
-      # StandardError=syslog
-      # SyslogIdentifier=<____>
-      # ExecStart=/home/pi/<directory>/<____>.py
-      # Restart=on-failure
-      # RestartSec=<restart time>
+echo "$WPA_LINE" > "$WPA_FILE"
 
-      # [Install]
-      # WantedBy=multi-user.target
-# run sudo systemctl enable <____>
-# you also may need to make the script into an executable:
-#    add #!/usr/bin/env python3 to the top of the script
-#    chmod -x <____>.py
+chmod +x /home/pi/MeltStake/ServiceScripts/$SyslogIdentifier.py
+done
+

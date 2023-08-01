@@ -28,6 +28,7 @@ if __name__ == "__main__":
     motors = [Devices.Motor(0), Devices.Motor(1)]  # Hardware supports up to 3 motors
     light = Devices.SubLight()
     data = Data()
+    leaksenor = Devices.LeakDetection()
 
     print("opening threads...")
     t_ARMED = []
@@ -36,6 +37,7 @@ if __name__ == "__main__":
         Thread(daemon=True, target=motors[i].ARMED).start()
         Thread(daemon=True, target=motors[i].count_pulses).start()
     Thread(daemon=True, target=battery.MonitorVoltageCurrent, args=(len(motors), motors, )).start()
+    Thread(daemon=True, target=leaksenor.Monitor).start()
     light.AdjustBrightness(0)  # turn on sub light
 
     # SAVE DATA:
@@ -66,7 +68,7 @@ if __name__ == "__main__":
     Thread(daemon=True, target=blink_LED2).start()
 
     # MAIN LOOP:
-    while not battery.under_voltage:
+    while not battery.under_voltage and not leaksenor.State:
 
         try:
             time.sleep(0.05)
@@ -110,17 +112,28 @@ if __name__ == "__main__":
         except Exception:
             logging.info("--- RUNTIME ERROR: ---")
             logging.info(traceback.format_exc())
-            if args.mode != 'debug':
-                commands.RELEASE(motors)  # release device from ice face
             break
 
-    if battery.under_voltage:
-        logging.info("LOW BATTERY! :: "+ str(battery.voltage/battery.BATT_VOLT_DIV_RATIO))
-        if args.mode == 'debug':
-            for i in range(len(motors)):
-                motors[i].OFF()  # set all motors to off before exiting code
-        else:
-            commands.RELEASE(motors)  # release device from ice face
-    
+    # set all motors & lights to off before exiting code
+    for i in range(len(motors)):
+        motors[i].OFF() 
     light.AdjustBrightness(0.0)
+
+    # If we're in deployment mode begin a RELEASE thread
+    if args.mode != 'debug':
+        Thread(daemon=True, target=eval(commands.RELEASE), args=(motors,)).start()
+
+    # transmit SOS call via beacon every 5 seconds
+    if leaksenor.State:
+        SOS_msg = "LEAK DETECTED!"
+    elif battery.under_voltage:
+        voltage = battery.voltage/battery.BATT_VOLT_DIV_RATIO
+        SOS_msg = "LOW BATTERY! : "+f"{voltage:.1f}"+"V"
+    else:
+        SOS_msg = "UNKNOWN ERROR"
+    
+    logging.info(SOS_msg)
+    while True:
+        beacon.Transmit_Message(SOS_msg)
+        time.sleep(5)
 

@@ -40,6 +40,20 @@ if devno in CLK_SPD:
 else:
     CLK_SPD = CLK_SPD['00']
 
+class LeakDetection:
+
+    def __init__(
+        self,
+    ):
+        pass
+
+    def Monitor(self):
+        with open('/home/pi/MeltStake/LeakState.txt', "r") as f:  
+            while True:
+                self.State = eval(f.readline())
+                time.sleep(0.25)
+
+
 
 class ADC:
 
@@ -209,8 +223,6 @@ class Motor:
             if current_feedback_value == False and prior_feedback_val == True:
                 self.position = self.position + 1
             prior_feedback_val = current_feedback_value
-
-
 
 
 class SubLight:
