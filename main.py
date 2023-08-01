@@ -12,16 +12,11 @@ from data_storage import Data
 from Operations import Operations
 
 
-if __name__ == "__main__":
+def meltstake(mode):
 
     # assign log file
     logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                         format="%(asctime)-15s %(levelname)-8s %(message)s")
-
-    # parse arguements
-    argParser = argparse.ArgumentParser()
-    argParser.add_argument("-m", "--mode", help=" mode of operation. Options: debug, deploy", default='deploy')
-    args = argParser.parse_args()
 
     # Initialize classes
     battery = Devices.ADC()
@@ -51,7 +46,7 @@ if __name__ == "__main__":
     beacon = Devices.Beacon()
     Thread(daemon=True, target=beacon.Receive_Message).start()
 
-    commands = Operations(args, motors)
+    commands = Operations(mode, motors)
     t_operation = Thread()  # initialize main thread variable
     known_commands = [attribute for attribute in dir(commands) if \
                       callable(getattr(commands, attribute)) and attribute.startswith('__') is False]
@@ -74,7 +69,7 @@ if __name__ == "__main__":
             time.sleep(0.05)
 
             ### Receive/transmit beacon messages
-            if args.mode == 'debug':
+            if mode == 'debug':
                 beacon.strmsg = input("input: ")  # Terminal input for testing.
 
             if beacon.strmsg != '':
@@ -120,7 +115,7 @@ if __name__ == "__main__":
     light.AdjustBrightness(0.0)
 
     # If we're in deployment mode begin a RELEASE thread
-    if args.mode != 'debug':
+    if mode != 'debug':
         Thread(daemon=True, target=eval(commands.RELEASE), args=(motors,)).start()
 
     # transmit SOS call via beacon every 5 seconds

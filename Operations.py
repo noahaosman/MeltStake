@@ -15,10 +15,10 @@ logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log",
 # This class contains all operations that can be called via acoustic beacon
 class Operations:
 
-    def __init__(self, args, motors):
+    def __init__(self, mode, motors):
         self.num_motors = len(motors)
         self.disarm = False
-        if args.mode == 'debug':
+        if mode == 'debug':
             self.speed = 0.2
         else:
             self.speed = 0.6
