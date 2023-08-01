@@ -48,12 +48,12 @@ class LeakDetection:
         pass
 
     def Monitor(self):
-        with open('/home/pi/MeltStake/LeakState.txt', "r") as f:  
-            while True:
+         
+        while True:
+            with open('/home/pi/MeltStake/LeakState.txt', "r") as f: 
                 self.State = eval(f.readline())
-                time.sleep(5)
-                print(self.State)
-
+            time.sleep(5)
+            print(self.State)
 
 
 class ADC:
