@@ -181,18 +181,18 @@ class Motor:
 
             iteration = 0
             pin_state_sum = 0
-            while iteration < 1000:
-                time.sleep(0.00000001)
+            while iteration < 10:
+                time.sleep(0.00001)
                 pin_state_sum = pin_state_sum + pin.value
                 iteration = iteration+1
-            pin_state = pin_state_sum/1000
+            pin_state = pin_state_sum/10
 
             print(pin_state)
 
-            if pin_state < 0.05 or pin_state > 0.95:
-                if pin_state < 0.05:
+            if pin_state <= 0.1 or pin_state >= 0.9:
+                if pin_state <= 0.1:
                     pin_state = False
-                elif pin_state > 0.95:
+                elif pin_state >= 0.9:
                     pin_state = True
 
                 if pin_state == True and prior_pin_state == False: # falling
