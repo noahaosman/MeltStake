@@ -187,8 +187,6 @@ class Motor:
                 iteration = iteration+1
             pin_state = pin_state_sum/10
 
-            print(pin_state)
-
             if pin_state <= 0.1 or pin_state >= 0.9:
                 if pin_state <= 0.1:
                     pin_state = False
