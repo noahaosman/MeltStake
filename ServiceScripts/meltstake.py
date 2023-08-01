@@ -5,7 +5,7 @@ import argparse
 import traceback
 import sys
 sys.path.append('/home/pi/MeltStake')
-from MeltStake.main import meltstake
+from MeltStake.main import main
 
 # parse arguements
 argParser = argparse.ArgumentParser()
@@ -13,7 +13,7 @@ argParser.add_argument("-m", "--mode", help=" mode of operation. Options: debug,
 args = argParser.parse_args()
 
 try:
-    meltstake(args.mode)
+    main(args.mode)
 except Exception:
     print(traceback.format_exc())
     time.sleep(10)

@@ -12,7 +12,7 @@ from data_storage import Data
 from Operations import Operations
 
 
-def meltstake(mode):
+def main(mode):
 
     # assign log file
     logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
