@@ -17,7 +17,7 @@ leak.direction = Direction.INPUT
 while leak.value == False:
     time.sleep(0.25)
 
-with open('/home/pi/Meltstake/Leak_State.txt', "w") as f:  
+with open('/home/pi/MeltStake/Leak_State.txt', "w") as f:  
     # write new data line
     f.write("True")
 
