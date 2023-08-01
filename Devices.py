@@ -215,7 +215,6 @@ class Motor:
 
                 if pin_state == True and prior_pin_state == False: # falling
                     self.pulses = self.pulses + 1
-                    print(self.pulses)
                     # time.sleep(0.1)  # debounce timer (at max speed approx 0.3s per rotation)
                 prior_pin_state = pin_state
         return

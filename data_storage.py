@@ -36,7 +36,7 @@ class Data:
         dt = datetime.now(timezone.utc).isoformat(timespec='milliseconds')
         current_date = dt[0:10]
         current_time = dt[0:23]
-        filename = "/home/" + os.getlogin() + "/data/" + data_bin + ".dat"
+        filename = "/home/pi/data/" + data_bin + ".dat"
 
         # Write new line to file. Format: current_time    data_1    ...    data_n
         if data_list != None:
