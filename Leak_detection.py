@@ -14,6 +14,9 @@ leak = DigitalInOut(board.D27)
 leak.direction = Direction.INPUT
 leak.pull = Pull.DOWN
 
+with open('/home/pi/MeltStake/Leak_State.txt', "w") as f:  
+    # write new data line
+    f.write("False")
 
 while leak.value == False:
     time.sleep(0.25)
