@@ -197,7 +197,7 @@ class Motor:
 
         integrator = 0
         output = 0
-        prior_output = 0
+        prior_output = 1
 
         if self.motor_no == 0:
             pin = DigitalInOut(board.D5)
@@ -226,7 +226,7 @@ class Motor:
 
             if output == 1 and prior_output == 0:
                 self.pulses = self.pulses + 1
-                
+
             prior_output = output
 
     # count actuator feedback pulses
