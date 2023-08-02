@@ -191,7 +191,7 @@ class Motor:
     def count_pulses(self):
         # debounce code based on debounce.c written by Kenneth A. Kuhn
 
-        DEBOUNCE_TIME = 0.01
+        DEBOUNCE_TIME = 0.005
         SAMPLE_FREQUENCY = 1000
         MAXIMUM = DEBOUNCE_TIME * SAMPLE_FREQUENCY
 
