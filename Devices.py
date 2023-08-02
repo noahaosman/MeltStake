@@ -191,7 +191,7 @@ class Motor:
     def count_pulses(self):
         # debounce code based on debounce.c written by Kenneth A. Kuhn
 
-        DEBOUNCE_TIME = 0.005
+        DEBOUNCE_TIME = 0.003
         SAMPLE_FREQUENCY = 1000
         MAXIMUM = DEBOUNCE_TIME * SAMPLE_FREQUENCY
 
@@ -224,20 +224,10 @@ class Motor:
                 output = 1
                 integrator = MAXIMUM
 
-            if output == 1 and prior_output == 0:
+            if output == 0 and prior_output == 1:
                 self.pulses = self.pulses + 1
 
             prior_output = output
-
-    # count actuator feedback pulses
-    def updatePosition(self):
-        prior_feedback_val = self.feedback.value
-        while True:
-            time.sleep(0.000001)
-            current_feedback_value = self.feedback.value
-            if current_feedback_value == False and prior_feedback_val == True:
-                self.position = self.position + 1
-            prior_feedback_val = current_feedback_value
 
 
 class SubLight:

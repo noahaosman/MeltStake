@@ -52,8 +52,6 @@ class Operations:
                 if not done:
                     if dir * (targ - curr) <= 0 or motor.overdrawn:  # if target is reached, or if overcurrent 
                         target_reached[motor_no] = True
-                        if abs(motor.current_speed) > 0 and abs(motor.current_speed) < 0.3:
-                            time.sleep(0.1) # give some extra time to move magnet away from reed switch
                         motor.ChangeSpeed(0, smoothed=False)  # turn motors off=
                     else:
                         motor.ChangeSpeed(dir * self.speed, smoothed=True)  # update motor speed
