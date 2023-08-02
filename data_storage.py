@@ -7,6 +7,7 @@ import ms5837
 from Devices import ImuMag
 import logging
 import re
+import os
 
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
