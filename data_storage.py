@@ -108,10 +108,10 @@ class Data:
         with suppress_stdout():
             im = ImuMag()  # initialize IMU
 
-        while True:
-            time.sleep(1/sample_rate)
-            self.IMU = im.main() #IMU data
-            self.WriteToFile(self.IMU)
+            while True:
+                time.sleep(1/sample_rate)
+                self.IMU = im.main() #IMU data
+                self.WriteToFile(self.IMU)
 
 
     def Pressure(self, sample_rate = 10):  # to be ran as thread
@@ -121,7 +121,7 @@ class Data:
         bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
 
         with suppress_stdout():
-            sensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))      
+            sensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))
 
         if not sensor.init():  # initialize sensor
             logging.info("Pressure sensor could not be initialized")
