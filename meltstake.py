@@ -63,6 +63,13 @@ def main(mode):
             time.sleep(0.5)
     Thread(daemon=True, target=blink_LED2).start()
 
+    if mode == 'debug':
+        print('COMMAND OPTIONS:')
+        print('    - DRILL ARG1 ARG2 :: drill motor 1 ARG1 turns and motor 2 ARG2 turns')
+        print('    - RELEASE :: release melt stake from ice face')
+        print('    - OFF :: turn all motors off')
+        print('    - SETSPD ARG1 :: set motor speed (0.0 < ARG1 < 1.0)')
+
     # MAIN LOOP:
     while not battery.under_voltage and not leaksenor.State:
 

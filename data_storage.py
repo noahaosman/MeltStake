@@ -10,7 +10,7 @@ import re
 import sys, os
 from contextlib import contextmanager
 
-# useful function to suppress print statements within a function
+# useful function to suppress print statements within a function (taken from Dave Smith's blog)
 @contextmanager
 def suppress_stdout():
     with open(os.devnull, "w") as devnull:

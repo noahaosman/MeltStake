@@ -141,7 +141,12 @@ bash /home/pi/camera_capture/setup.sh
 apt-get install -y mpv # this package lets you view video in terminal over ssh (bad quality!!) mpv --no-config --vo=tct <video file>
 
 
-# Service Scripts:
+#---Service Scripts---
+
+# make all scripts exectuble:
+chmod +x /home/pi/MeltStake/ServiceScripts/*
+chmod +x /home/pi/MeltStake/main.py
+
 scripts='heartbeat LeakDetection ArmPWM'
 
 for SyslogIdentifier in $scripts
