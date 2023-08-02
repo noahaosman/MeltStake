@@ -197,7 +197,7 @@ class Motor:
 
         integrator = 0
         output = 0
-        prior_output = 1
+        prior_output = 0
 
         if self.motor_no == 0:
             pin = DigitalInOut(board.D5)
