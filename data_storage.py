@@ -1,16 +1,25 @@
 # pyright: reportMissingImports=false
 import time
 from datetime import datetime, timezone
-import sys, os
 import inspect
 from brping import Ping1D      
 import ms5837
 from Devices import ImuMag
 import logging
 import re
+from contextlib import contextmanager
+import sys, os
 
-# block all print statements from within this module
-sys.stdout = open(os.devnull, 'w')
+# useful function to suppress print statements within a function
+@contextmanager
+def suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout
 
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
@@ -79,7 +88,9 @@ class Data:
         time.sleep(startup_delay)  # give some time for other threads to start up
         
         myPing = Ping1D()
-        myPing.connect_serial("/dev/ttyAMA0", 115200)
+
+        with suppress_stdout():
+            myPing.connect_serial("/dev/ttyAMA0", 115200)
 
         while myPing.initialize() is False:
             time.sleep(10)  # if ping fails to init, try again in 10 seconds
@@ -94,7 +105,8 @@ class Data:
     def Orientation(self, sample_rate = 10):  # Format: pitch    roll    heading
         time.sleep(startup_delay)  # give some time for other threads to start up
         
-        im = ImuMag()  # initialize IMU
+        with suppress_stdout():
+            im = ImuMag()  # initialize IMU
 
         while True:
             time.sleep(1/sample_rate)
