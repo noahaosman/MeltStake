@@ -103,7 +103,15 @@ pip3 install pypdf2
 apt-get install -y python3-smbus2
 pip install smbus2
 
+# initialize data directory
 mkdir /home/pi/data
+dat_files='meltstake.log CurrentDraw.dat Orientation.dat Rotations.dat Pressure.dat Ping.dat'
+for filename in $dat_files
+do
+touch filename
+done
+chmod 777 /home/pi/data/*
+
 mkdir /home/pi/packages
 
 # Install software for IMU/Magnetometer on Navigator
@@ -182,3 +190,6 @@ WantedBy=multi-user.target
 EOM
 echo "$SERVICE_LINE" > "$SERVICE_FILE"
 chmod +x /home/pi/MeltStake/main.py
+#TODO:
+# - populate ~/data with dat files
+# - run "chmod 777 ~/data/*" within data to allow meltstake service to write to its files

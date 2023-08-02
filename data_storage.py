@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false
 import time
 from datetime import datetime, timezone
-import os
+import sys, os
 import inspect
 from brping import Ping1D      
 import ms5837
@@ -9,6 +9,8 @@ from Devices import ImuMag
 import logging
 import re
 
+# block all print statements from within this module
+sys.stdout = open(os.devnull, 'w')
 
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
