@@ -6,6 +6,19 @@ from threading import Thread
 import traceback
 import board
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
+from contextlib import contextmanager
+import sys, os
+
+# useful function to suppress print statements within a function
+@contextmanager
+def suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout
 
 import Devices
 from data_storage import Data
@@ -36,12 +49,14 @@ def main(mode):
     light.AdjustBrightness(0)  # turn on sub light
 
     # SAVE DATA:
-    SAMPLE_RATE = 10  # data sampling rate in Hz
-    Thread(daemon=True, target=data.CurrentDraw, args=(battery, motors, SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Rotations, args=(motors, SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Ping, args=(SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Orientation, args=(SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Pressure, args=(SAMPLE_RATE,)).start()
+
+    with suppress_stdout():
+        SAMPLE_RATE = 10  # data sampling rate in Hz
+        Thread(daemon=True, target=data.CurrentDraw, args=(battery, motors, SAMPLE_RATE,)).start()
+        Thread(daemon=True, target=data.Rotations, args=(motors, SAMPLE_RATE,)).start()
+        Thread(daemon=True, target=data.Ping, args=(SAMPLE_RATE,)).start()
+        Thread(daemon=True, target=data.Orientation, args=(SAMPLE_RATE,)).start()
+        Thread(daemon=True, target=data.Pressure, args=(SAMPLE_RATE,)).start()
 
     beacon = Devices.Beacon()
     Thread(daemon=True, target=beacon.Receive_Message).start()
