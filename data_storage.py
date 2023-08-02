@@ -119,7 +119,9 @@ class Data:
 
         Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
         bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
-        sensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))      
+
+        with suppress_stdout():
+            sensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))      
 
         if not sensor.init():  # initialize sensor
             logging.info("Pressure sensor could not be initialized")
