@@ -46,8 +46,3 @@ while True:
     with open('/home/pi/MeltStake/BatteryCapacitance.txt', "w") as f:  
         # write new data line
         f.write(f"{cap:.1f}")
-
-    print("Battery Voltage : " + f"{voltage:.2f}" + "V")
-    print("Percent capacitance : " + f"{cap:.1f}" + "%")
-
-
