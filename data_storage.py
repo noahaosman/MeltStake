@@ -116,11 +116,8 @@ class Data:
     def Pressure(self, sample_rate = 10):  # to be ran as thread
         time.sleep(startup_delay)  # give some time for other threads to start up
 
-        Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
-        bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
-
         with suppress_stdout(): #IMU data
-            sensor = ms5837.MS5837_30BA(int(bus[0].split('-')[1]))
+            sensor = ms5837.MS5837_30BA(22)
 
             if not sensor.init():  # initialize sensor
                 logging.info("Pressure sensor could not be initialized")

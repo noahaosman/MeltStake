@@ -26,10 +26,7 @@ def capP(V):
 
 i2c_bus4 = I2C(4)
 
-Allbuses = [f for f in os.listdir('/dev') if re.match(r'i2c*', f)]
-bus = [i for i in Allbuses if i not in ['i2c-1','i2c-2','i2c-4']]
-print("ADS i2c bus : "+str(int(bus[0].split('-')[1])))
-ads_bus = I2C(int(bus[0].split('-')[1]))
+ads_bus = I2C(22)
 ads_addr = 0x48
 BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
 
