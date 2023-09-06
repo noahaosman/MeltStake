@@ -200,9 +200,9 @@ class Motor:
         prior_output = 0
 
         if self.motor_no == 0:
-            pin = DigitalInOut(board.D5)
-        else:
             pin = DigitalInOut(board.D4)
+        else:
+            pin = DigitalInOut(board.D8)
         pin.direction = Direction.INPUT
         pin.pull = Pull.DOWN
 

@@ -136,9 +136,15 @@ cd /home/pi/packages/ping-python
 python3 setup.py install
 
 # install camera code
-git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git
+git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git /home/pi/packages/camera_capture
 bash /home/pi/camera_capture/setup.sh
 apt-get install -y mpv # this package lets you view video in terminal over ssh (bad quality!!) mpv --no-config --vo=tct <video file>
+
+# install beacon code
+git clone --single-branch --branch jasmine https://github.com/RoboticOceanographicSurfaceSampler/acoustic-beacons.git /home/pi/nav
+cd /home/pi/nav
+bash /home/pi/nav/install.sh
+systemctl restart beacons
 
 
 #---Service Scripts---

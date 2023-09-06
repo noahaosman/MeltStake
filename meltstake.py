@@ -20,7 +20,7 @@ def main(mode):
 
     # Initialize classes
     battery = Devices.ADC()
-    motors = [Devices.Motor(0), Devices.Motor(1)]  # Hardware supports up to 3 motors
+    motors = [Devices.Motor(0), Devices.Motor(1)]
     light = Devices.SubLight()
     data = Data()
     leaksenor = Devices.LeakDetection()
