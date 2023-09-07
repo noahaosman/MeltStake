@@ -141,15 +141,16 @@ class Operations:
 
         loops = 0
         wait_time = 1
-        t_release = Thread().start() #init
         while True:
             
             # if we're below the surface and not rising, try to drill out
             if self.stuck: 
 
-                #set melt stake to drill out:
-                if not t_release.is_alive(): 
+                if loops == 0:
                     t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
+                else:
+                    if not t_release.is_alive(): 
+                        t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
                 
                 time.sleep(wait_time)
                 logging.info("LOOP: "+str(loops))
