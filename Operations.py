@@ -135,6 +135,8 @@ class Operations:
         Thread(daemon=True, target=check_if_floating).start()
         time.sleep(0.1)
 
+        logging.info(str(self.stuck))
+
         self.OFF(motors)
 
         loops = 0
