@@ -63,6 +63,11 @@ def main(mode):
             time.sleep(0.5)
     Thread(daemon=True, target=blink_LED2).start()
 
+    # init warning LED GPIO
+    SOSled = DigitalInOut(board.D11)
+    SOSled.direction = Direction.OUTPUT
+    SOSled.value = True
+
     if mode == 'debug':
         print('COMMAND OPTIONS:')
         print('    - DRILL ARG1 ARG2 :: drill motor 1 ARG1 turns and motor 2 ARG2 turns')
