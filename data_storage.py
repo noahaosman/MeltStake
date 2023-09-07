@@ -73,10 +73,9 @@ class Data:
 
     def Ping(self, sample_rate = 10):  # Format: Distance    % confidence
         time.sleep(startup_delay)  # give some time for other threads to start up
-
-        with suppress_stdout():   
-            myPing = Ping1D()
-            myPing.connect_serial("/dev/ttyAMA0", 115200)
+ 
+        myPing = Ping1D()
+        myPing.connect_serial("/dev/ttyAMA0", 115200)
 
         while myPing.initialize() is False:
             time.sleep(10)  # if ping fails to init, try again in 10 seconds
@@ -92,8 +91,7 @@ class Data:
         time.sleep(startup_delay)  # give some time for other threads to start up
 
         im = ImuMag()  # initialize IMU
-        with suppress_stdout():  
-            self.IMU = im.main() #IMU data
+        self.IMU = im.main() #IMU data
 
         while True:
             time.sleep(1/sample_rate)
@@ -104,15 +102,14 @@ class Data:
     def Pressure(self, sample_rate = 10):  # to be ran as thread
         time.sleep(startup_delay)  # give some time for other threads to start up
 
-        with suppress_stdout(): #IMU data
-            sensor = ms5837.MS5837_30BA(22)
+        sensor = ms5837.MS5837_30BA(22)
 
-            if not sensor.init():  # initialize sensor
-                logging.info("Pressure sensor could not be initialized")
-                exit(1)
-            if not sensor.read():  # Check we can read from sensor
-                logging.info("Pressure sensor read failed!")
-                exit(1)
+        if not sensor.init():  # initialize sensor
+            logging.info("Pressure sensor could not be initialized")
+            exit(1)
+        if not sensor.read():  # Check we can read from sensor
+            logging.info("Pressure sensor read failed!")
+            exit(1)
 
         while True:
             time.sleep(1/sample_rate)
