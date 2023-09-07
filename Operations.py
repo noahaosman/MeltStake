@@ -137,16 +137,11 @@ class Operations:
 
         loops = 0
         wait_time = 1
+        Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
         while True:
             
             # if we're below the surface and not rising, try to drill out
             if self.stuck: 
-
-                if loops == 0:
-                    t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
-                else:
-                    if not t_release.is_alive(): 
-                        t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
                 
                 time.sleep(wait_time)
                 logging.info("LOOP: "+str(loops))
@@ -160,6 +155,8 @@ class Operations:
                         Thread(daemon=True, target=self.DRILL, args=(motors, [5, 5] )).start()
                         time.sleep(5)
                         self.OFF(motors)
+                        time.sleep(1)
+                        Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
                 
             else:
                 break
