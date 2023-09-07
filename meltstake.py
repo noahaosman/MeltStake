@@ -149,7 +149,10 @@ def main(mode):
         time.sleep(0.1)
     Thread(daemon=True, target=SOSblink).start()
     while True:
-        beacon.Transmit_Message(SOS_msg)
+        try:
+            beacon.Transmit_Message(SOS_msg)
+        except Exception:
+            pass
         time.sleep(5)
 
 
