@@ -141,7 +141,7 @@ class Operations:
 
         loops = 0
         wait_time = 1
-        t_release = Thread() #init
+        t_release = Thread().start() #init
         while True:
             
             # if we're below the surface and not rising, try to drill out
