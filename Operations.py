@@ -126,7 +126,7 @@ class Operations:
             while True:
                 [Pread, depth, velocity] = get_saved_data("Pressure")
                 if Pread and (depth <= 1.05):# or velocity > 0.001): 
-                    self.stuck = False
+                    self.stuck = False 
                     break
                 time.sleep(0.5)
             return
