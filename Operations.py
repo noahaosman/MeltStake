@@ -90,7 +90,7 @@ class Operations:
         
         def get_saved_data(data_type, time_between=0):
             # get last 2 measurements
-            reads = [[None,None],[None,None]]
+            reads = [[None,None,None],[None,None,None]]
             for i in [0,1]:
                 data = read_n_to_last_line("/home/pi/data/"+data_type+".dat", n = i*2 + 2 + i*10*time_between)
                 data = data.split()
