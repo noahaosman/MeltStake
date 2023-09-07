@@ -149,6 +149,7 @@ cd /home/pi/nav
 bash /home/pi/nav/install.sh
 sed -i '/StandardOutput=syslog/ i Restart=always\
 RestartSec=30' /etc/systemd/system/beacons.service
+systemctl daemon-reload
 systemctl restart beacons
 chown -R pi:pi /home/pi/nav
 
