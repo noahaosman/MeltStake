@@ -125,8 +125,6 @@ class Operations:
             self.stuck = True
             while True:
                 [Pread, depth, velocity] = get_saved_data("Pressure")
-                logging.info("depth: "+str(depth))
-                logging.info("velocity: "+str(velocity))
                 if Pread and (depth <= 1.05 or velocity > 0.001): 
                     self.stuck = True#False
                     break
@@ -134,8 +132,6 @@ class Operations:
             return
         Thread(daemon=True, target=check_if_floating).start()
         time.sleep(0.1)
-
-        logging.info(str(self.stuck))
 
         self.OFF(motors)
 
