@@ -102,6 +102,8 @@ pip3 install matplotlib
 pip3 install pypdf2
 apt-get install -y python3-smbus2
 pip install smbus2
+pip3 install pyyaml
+pip3 install pynmea2
 
 # initialize data directory
 mkdir /home/pi/data
@@ -111,6 +113,7 @@ do
 touch filename
 done
 chmod 777 /home/pi/data/*
+chown -R pi:pi /home/pi/data
 
 mkdir /home/pi/packages
 
@@ -145,6 +148,7 @@ git clone --single-branch --branch jasmine https://github.com/RoboticOceanograph
 cd /home/pi/nav
 bash /home/pi/nav/install.sh
 systemctl restart beacons
+chown -R pi:pi /home/pi/nav
 
 
 #---Service Scripts---
@@ -201,3 +205,4 @@ WantedBy=multi-user.target
 EOM
 echo "$SERVICE_LINE" > "$SERVICE_FILE"
 chmod +x /home/pi/MeltStake/main.py
+systemctl enable meltstake

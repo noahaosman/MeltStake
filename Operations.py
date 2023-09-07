@@ -88,46 +88,83 @@ class Operations:
                 last_line = f.readline().decode()
             return last_line
         
-        self.OFF(motors)
-
-        attempts = 0
-        while attempts <= 10:
-
-            lastPreads = [[None,None],[None,None]]
+        def get_saved_data(data_type, time_between=0):
+            # get last 2 measurements
+            reads = [[None,None],[None,None]]
             for i in [0,1]:
-                data = read_n_to_last_line('/home/pi/data/Pressure.dat', n = i*2+2)
+                data = read_n_to_last_line("/home/pi/data/"+data_type+".dat", n = i*2 + 2 + i*10*time_between)
                 data = data.split()
-                lastPreads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
-                lastPreads[i][1] = float(data[1])
+                reads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
+                for j in range(1,len(data)):
+                    reads[i][j] = float(data[j])
                 print(data)
 
             dt = datetime.now()
-            time_since_last_Pread = (dt - lastPreads[1][0]).total_seconds()
-            time_between_Preads = (lastPreads[0][0] - lastPreads[1][0]).total_seconds()
+            time_since_last_read = (dt - reads[1][0]).total_seconds()
+            time_between_reads = (reads[0][0] - reads[1][0]).total_seconds()
 
-            if time_since_last_Pread > 1 or time_between_Preads > 5:
-                # bad pressure reading, assume we're at depth
-                Pread = False
-                depth = 2
-                velocity = 0
-                logging.info("Bad pressure reading")
+            if time_since_last_read > 1 or time_between_reads > 5:
+                # bad reading, assume we're at depth
+                data_read = False
+                P0 = 0
+                P1 = 0
+                logging.info("Bad "+data_type+" reading")
             else:
-                Pread = True
-                P0 = lastPreads[1][1]
-                P1 = lastPreads[0][1]
-                depth = (P0+P1)/2
-                velocity = (P1-P0)/time_between_Preads
+                data_read = True
+                if data_type == "Pressure":
+                    P0 = reads[1][1]
+                    P1 = reads[0][1]
+                    out1 = (P0+P1)/2 #depth
+                    out2 = (P1-P0)/time_between_reads #velocity
+                if data_type == "Rotations":
+                    out1 = reads[1][1] - reads[0][1]# difference in encoder 1
+                    out2 = reads[1][2] - reads[0][2]# difference in encoder 2
 
-            # if we're in the ice, try to drill out
-            if ((depth > 1.05 and velocity < 0.001) or not Pread): 
-                logging.info("RELEASE loop "+str(attempts+1)+"/10")
-                self.DRILL(motors, [-50, -50])
-                if attempts > 0: # try to reverse in if it seems like we're stuck
-                    self.DRILL(motors, [5, 5])
+            return [data_read, out1, out2]
+        
+
+        def check_if_floating():
+            self.stuck = True
+            while True:
+                [Pread, depth, velocity] = get_saved_data("Pressure")
+                if ((depth > 1.05 and velocity < 0.001) or not Pread): 
+                    #stuck at depth
+                    pass
+                else:
+                    self.stuck = False
+                    break
+            return
+        Thread(daemon=True, target=self.check_if_floating).start()
+
+        self.OFF(motors)
+
+        loops = 0
+        wait_time = 1
+        t_release = Thread() #init
+        while True:
+            
+            # if we're below the surface and not rising, try to drill out
+            if self.stuck: 
+
+                #set melt stake to drill out:
+                if not t_release.is_alive():
+                    t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
+                time.sleep(wait_time)
+
+                if loops*wait_time > 20: # check that # of rotations are increasing (try 20 seconds)
+                    [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
+                    if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
+                        # attempt to drill in 5 turns on both stakes (this sometimes helps loosen the ice)
+                        self.OFF(motors) # kill t_release
+                        time.sleep(1)
+                        Thread(daemon=True, target=self.DRILL, args=(motors, [5, 5] )).start()
+                        time.sleep(5)
+                        self.OFF(motors)
             else:
                 break
+            
+            loops = loops+1
 
-            attempts = attempts + 1
         return
 
     def OFF(self, motors):  

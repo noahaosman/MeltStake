@@ -1,6 +1,8 @@
 # pyright: reportMissingImports=false
 import busio
 import board
+import numpy as np
+import time
 from adafruit_extended_bus import ExtendedI2C as I2C
 from adafruit_pca9685 import PCA9685  # PCA9685 module (PWM driver)
 from adafruit_ads1x15.analog_in import AnalogIn
@@ -16,18 +18,34 @@ pca = PCA9685(i2c_bus4)
 pca.reference_clock_speed = 25000000  # Set the PWM frequency (Default 25000000)
 pca.frequency = 200  # Set the PWM duty cycle.
 
-while True:
-    usr_in_mot = input("Motor number (0 or 1) :: ")
-    usr_in_PWM = input("PWM inp (1100 <--> 1900; 1500 for OFF) :: ")
 #while True:
-    usr_in_CLK = input("CLK SPD (DEF 2.5) :: ")
-    pca.reference_clock_speed = int(float(usr_in_CLK)*10000000)
-    print(int(float(usr_in_CLK)*10000000))
-    try:
+usr_in_mot = input("Motor number (0 or 1) :: ")
+usr_in_PWM = input("PWM inp (1100 <--> 1900; 1500 for OFF) :: ")
+usr_in_auto_or_man = input("Atomatic CLK speed sweep or manual? (1|0)")
+
+if usr_in_auto_or_man == "0":
+
+    while True:
+        usr_in_CLK = input("CLK SPD (DEF 2.5) :: ")
+        pca.reference_clock_speed = int(float(usr_in_CLK)*10000000)
+        print(int(float(usr_in_CLK)*10000000))
+        try:
+            pwm_input = float(usr_in_PWM)
+            print(pwm_input)
+            pca.channels[int(usr_in_mot)].duty_cycle = \
+                int(pca.frequency*(10**-6)*pwm_input*65535)
+        except Exception as e:
+            print(e)
+            print("bad input, try again")
+
+else:
+
+    for usr_in_CLK in np.arange(2.3, 2.7, 0.01).tolist():
+        print(usr_in_CLK)
+        pca.reference_clock_speed = int(float(usr_in_CLK)*10000000)
+        print(int(float(usr_in_CLK)*10000000))
         pwm_input = float(usr_in_PWM)
         print(pwm_input)
         pca.channels[int(usr_in_mot)].duty_cycle = \
             int(pca.frequency*(10**-6)*pwm_input*65535)
-    except Exception as e:
-        print(e)
-        print("bad input, try again")
+        time.sleep(1)
