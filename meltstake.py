@@ -70,6 +70,9 @@ def main(mode):
         print('    - OFF :: turn all motors off')
         print('    - SETSPD ARG1 :: set motor speed (0.0 < ARG1 < 1.0)')
 
+    startup_time = 3
+    time.sleep(startup_time)
+
     # MAIN LOOP:
     while not battery.under_voltage and not leaksenor.State:
 
