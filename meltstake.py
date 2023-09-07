@@ -127,7 +127,7 @@ def main(mode):
 
     # If we're in deployment mode begin a RELEASE thread
     if mode != 'debug':
-        Thread(daemon=True, target=eval(commands.RELEASE), args=(motors,)).start()
+        Thread(daemon=True, target=commands.RELEASE, args=(motors,)).start()
 
     # transmit SOS call via beacon every 5 seconds
     if leaksenor.State:
