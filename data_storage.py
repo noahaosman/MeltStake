@@ -8,18 +8,6 @@ from Devices import ImuMag
 import logging
 import re
 import sys, os
-from contextlib import contextmanager
-
-# useful function to suppress print statements within a function (taken from Dave Smith's blog)
-@contextmanager
-def suppress_stdout():
-    with open(os.devnull, "w") as devnull:
-        old_stdout = sys.stdout
-        sys.stdout = devnull
-        try:  
-            yield
-        finally:
-            sys.stdout = old_stdout
 
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
