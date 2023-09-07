@@ -146,7 +146,8 @@ class Operations:
                 time.sleep(wait_time)
                 logging.info("LOOP: "+str(loops))
 
-                if loops*wait_time > 2: # check that # of rotations are increasing (try 20 seconds)
+                if loops*wait_time > 2: # check that # of rotations are increasing
+                    loops = 0
                     [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
                     if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
                         # attempt to drill in 5 turns on both stakes (this sometimes helps loosen the ice)
