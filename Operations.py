@@ -133,6 +133,7 @@ class Operations:
                 time.sleep(0.5)
             return
         Thread(daemon=True, target=check_if_floating).start()
+        time.sleep(0.1)
 
         self.OFF(motors)
 
