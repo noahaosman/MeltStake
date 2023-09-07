@@ -97,7 +97,6 @@ class Operations:
                 reads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
                 for j in range(1,len(data)):
                     reads[i][j] = float(data[j])
-                print(data)
 
             dt = datetime.now()
             time_since_last_read = (dt - reads[1][0]).total_seconds()
@@ -150,6 +149,7 @@ class Operations:
                 if not t_release.is_alive():
                     t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
                 time.sleep(wait_time)
+                print(loops)
 
                 if loops*wait_time > 20: # check that # of rotations are increasing (try 20 seconds)
                     [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
