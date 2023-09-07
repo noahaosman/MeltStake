@@ -115,6 +115,7 @@ def main(mode):
         except Exception:
             logging.info("--- RUNTIME ERROR: ---")
             logging.info(traceback.format_exc())
+            print(traceback.format_exc())
             break
 
     # set all motors & lights to off before exiting code
