@@ -128,7 +128,7 @@ class Operations:
                 logging.info("depth: "+str(depth))
                 logging.info("velocity: "+str(velocity))
                 if Pread and (depth <= 1.05 or velocity > 0.001): 
-                    self.stuck = False
+                    self.stuck = True#False
                     break
                 time.sleep(0.5)
             return
@@ -166,6 +166,8 @@ class Operations:
                 break
             
             loops = loops+1
+
+        logging.info("exiting RELEASE operation")
 
         self.OFF(motors)
         return
