@@ -139,6 +139,15 @@ def main(mode):
         SOS_msg = "UNKNOWN ERROR"
     
     logging.info(SOS_msg)
+    def SOSblink():
+        # init LED GPIO
+        SOSled = DigitalInOut(board.D11)
+        SOSled.direction = Direction.OUTPUT
+        SOSled.value = True
+        time.sleep(0.1)
+        SOSled.value = False
+        time.sleep(0.1)
+    Thread(daemon=True, target=SOSblink).start()
     while True:
         beacon.Transmit_Message(SOS_msg)
         time.sleep(5)
