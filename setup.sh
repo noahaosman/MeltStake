@@ -147,6 +147,8 @@ apt-get install -y mpv # this package lets you view video in terminal over ssh (
 git clone --single-branch --branch jasmine https://github.com/RoboticOceanographicSurfaceSampler/acoustic-beacons.git /home/pi/nav
 cd /home/pi/nav
 bash /home/pi/nav/install.sh
+sed -i '/StandardOutput=syslog/ i Restart=always\
+RestartSec=30' /etc/systemd/system/beacons.service
 systemctl restart beacons
 chown -R pi:pi /home/pi/nav
 
