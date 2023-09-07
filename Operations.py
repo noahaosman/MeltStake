@@ -149,7 +149,7 @@ class Operations:
                 if not t_release.is_alive():
                     t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
                 time.sleep(wait_time)
-                print(loops)
+                logging.info(str(loops))
 
                 if loops*wait_time > 20: # check that # of rotations are increasing (try 20 seconds)
                     [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
