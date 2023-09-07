@@ -153,17 +153,23 @@ class Operations:
                 
                 logging.info("111b")
                 time.sleep(wait_time)
-                logging.info(str(loops))
+                logging.info("LOOP: "+str(loops))
 
                 if loops*wait_time > 20: # check that # of rotations are increasing (try 20 seconds)
+                    logging.info("2")
                     [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
+                    logging.info("22")
                     if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
+                        logging.info("222")
                         # attempt to drill in 5 turns on both stakes (this sometimes helps loosen the ice)
                         self.OFF(motors) # kill t_release
                         time.sleep(1)
                         Thread(daemon=True, target=self.DRILL, args=(motors, [5, 5] )).start()
+                        logging.info("2222")
                         time.sleep(5)
                         self.OFF(motors)
+                
+                logging.info("3")
             else:
                 break
             
