@@ -16,6 +16,7 @@ import socket
 from icm20602 import ICM20602
 from mmc5983 import MMC5983
 import logging
+import traceback
 
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
@@ -394,13 +395,14 @@ class Beacon:
             s.send(fullmsg.encode())
             s.close()
 
-            # hotfix for sending responses to laptop beacon. Should be able to just tell ID of pinging beacon?
-            time.sleep(0.5) 
-            s.connect((HOST, PORT))
-            fullmsg = '203 RE: ' + msg
-            s.send(fullmsg.encode())
-            s.close()
+            # hotfix for sending responses to laptop beacon. Should be able to just read ID of pinging beacon?
+            # time.sleep(0.5) 
+            # s.connect((HOST, PORT))
+            # fullmsg = '203 RE: ' + msg
+            # s.send(fullmsg.encode())
+            # s.close()
             
             logging.info(fullmsg)
         except Exception:
             logging.info("ERROR transmitting message: " + msg)
+            logging.info(traceback.format_exc())
