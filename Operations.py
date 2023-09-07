@@ -102,22 +102,22 @@ class Operations:
             time_since_last_read = (dt - reads[1][0]).total_seconds()
             time_between_reads = (reads[0][0] - reads[1][0]).total_seconds()
 
-            if time_since_last_read > 1 or time_between_reads > 5:
-                # bad reading, assume we're at depth
-                data_read = False
-                P0 = 0
-                P1 = 0
-                logging.info("Bad "+data_type+" reading")
-            else:
-                data_read = True
-                if data_type == "Pressure":
+            data_read = True
+            if data_type == "Pressure":
+                if time_since_last_read > 1 or time_between_reads > 5:
+                    # bad reading
+                    data_read = False
+                    out1 = 0
+                    out2 = 0
+                    logging.info("Bad "+data_type+" reading")
+                else:
                     P0 = reads[1][1]
                     P1 = reads[0][1]
                     out1 = (P0+P1)/2 #depth
                     out2 = (P1-P0)/time_between_reads #velocity
-                if data_type == "Rotations":
-                    out1 = reads[1][1] - reads[0][1]# difference in encoder 1
-                    out2 = reads[1][2] - reads[0][2]# difference in encoder 2
+            if data_type == "Rotations":
+                out1 = reads[1][1] - reads[0][1]# difference in encoder 1
+                out2 = reads[1][2] - reads[0][2]# difference in encoder 2
 
             return [data_read, out1, out2]
 
@@ -146,7 +146,7 @@ class Operations:
                 time.sleep(wait_time)
                 logging.info("LOOP: "+str(loops))
 
-                if loops*wait_time > 20: # check that # of rotations are increasing (try 20 seconds)
+                if loops*wait_time > 2: # check that # of rotations are increasing (try 20 seconds)
                     [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
                     if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
                         # attempt to drill in 5 turns on both stakes (this sometimes helps loosen the ice)
