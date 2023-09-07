@@ -125,7 +125,7 @@ class Operations:
             self.stuck = True
             while True:
                 [Pread, depth, velocity] = get_saved_data("Pressure")
-                if Pread and (depth <= 1.05 or velocity > 0.001): 
+                if Pread and (depth <= 1.05):# or velocity > 0.001): 
                     self.stuck = False
                     break
                 time.sleep(0.5)
@@ -146,7 +146,7 @@ class Operations:
                 time.sleep(wait_time)
                 logging.info("LOOP: "+str(loops))
 
-                if loops*wait_time > 2: # check that # of rotations are increasing
+                if loops*wait_time > 20: # check that # of rotations are increasing
                     loops = 0
                     [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
                     if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
