@@ -73,6 +73,8 @@ class Operations:
         #    2) rate of change of depth is less than 0.1 m/s (i.e. meltstake is not rising)
         # it will try to release 10 times, then give up.
 
+        print("releasing!")
+
         def read_n_to_last_line(filename, n = 1):
             """Returns the nth before last line of a file (n=1 gives last line)"""
             num_newlines = 0
@@ -88,6 +90,8 @@ class Operations:
                 last_line = f.readline().decode()
             return last_line
         
+        print("1")
+
         def get_saved_data(data_type, time_between=0):
             # get last 2 measurements
             reads = [[None,None,None],[None,None,None]]
@@ -121,6 +125,7 @@ class Operations:
 
             return [data_read, out1, out2]
         
+        print("11")
 
         def check_if_floating():
             self.stuck = True
@@ -134,6 +139,8 @@ class Operations:
                     break
             return
         Thread(daemon=True, target=check_if_floating).start()
+
+        print("111")
 
         self.OFF(motors)
 
