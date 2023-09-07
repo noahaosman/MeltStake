@@ -134,7 +134,7 @@ class Operations:
                     self.stuck = False
                     break
             return
-        Thread(daemon=True, target=self.check_if_floating).start()
+        Thread(daemon=True, target=check_if_floating).start()
 
         self.OFF(motors)
 
