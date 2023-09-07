@@ -125,12 +125,12 @@ class Operations:
             self.stuck = True
             while True:
                 [Pread, depth, velocity] = get_saved_data("Pressure")
-                if ((depth > 1.05 and velocity < 0.001) or not Pread): 
-                    #stuck at depth
-                    pass
-                else:
+                logging.info("depth: "+str(depth))
+                logging.info("velocity: "+str(velocity))
+                if Pread and (depth <= 1.05 or velocity > 0.001): 
                     self.stuck = False
                     break
+                time.sleep(0.5)
             return
         Thread(daemon=True, target=check_if_floating).start()
 
@@ -141,40 +141,32 @@ class Operations:
         t_release = Thread() #init
         while True:
             
-            logging.info("1")
             # if we're below the surface and not rising, try to drill out
             if self.stuck: 
-                logging.info("11")
 
                 #set melt stake to drill out:
-                if not t_release.is_alive():
-                    logging.info("111a")   
+                if not t_release.is_alive(): 
                     t_release = Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
                 
-                logging.info("111b")
                 time.sleep(wait_time)
                 logging.info("LOOP: "+str(loops))
 
                 if loops*wait_time > 20: # check that # of rotations are increasing (try 20 seconds)
-                    logging.info("2")
                     [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
-                    logging.info("22")
                     if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
-                        logging.info("222")
                         # attempt to drill in 5 turns on both stakes (this sometimes helps loosen the ice)
                         self.OFF(motors) # kill t_release
                         time.sleep(1)
                         Thread(daemon=True, target=self.DRILL, args=(motors, [5, 5] )).start()
-                        logging.info("2222")
                         time.sleep(5)
                         self.OFF(motors)
                 
-                logging.info("3")
             else:
                 break
             
             loops = loops+1
 
+        self.OFF(motors)
         return
 
     def OFF(self, motors):  
