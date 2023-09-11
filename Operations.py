@@ -67,17 +67,15 @@ class Operations:
         self.OFF(motors)
         return
     
-    def AUTO(self, motors, deployment_time):
+    def AUTO(self, motors, deployment_intv_time):
         # operation for autonomous deployment
-        # try to drill in x rotations every y minutes
+        # try to drill in 10 rotations every deployment_intv_time[0] minutes
+        # release after deployment_intv_time[1] minutes
 
-        melt_rate = 2 #cm/hr
-        time_between_drills = 60 # minutes
+        time_between_drills = float(deployment_intv_time[0])
+        deployment_time = float(deployment_intv_time[1])
 
-        rotations_per_hour = melt_rate/0.63 
-        rotations_per_drill = rotations_per_hour/time_between_drills
-
-        deployment_time = float(deployment_time[0])
+        rotations_per_drill = 10
 
         self.OFF(motors)
 
@@ -87,7 +85,7 @@ class Operations:
         init_time = time.time()
         last_drill_time = init_time
 
-        while ((time.time()-init_time) < (deployment_time*3600)) and not self.SOS_flag and not self.disarm:
+        while ((time.time()-init_time) < (deployment_time*60)) and not self.SOS_flag and not self.disarm:
 
             time.sleep(0.1)
 
