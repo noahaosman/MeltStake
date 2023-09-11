@@ -17,4 +17,3 @@ try:
     meltstake.main(args.mode)
 except Exception:
     print(traceback.format_exc())
-    time.sleep(10)

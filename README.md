@@ -14,8 +14,8 @@ The default IP address for all Raspberry pi on a shared network can be found by 
 - `arp -n -a | grep -i '28:\|B8:\|D8:\|DC:\|E4:'`
 
 # Standard Operating Procedure
-For long-term deployment, hand-load melt stake onto Walrus (delivery ROV). SSH into Walrus (`pi@192.168.1.3`(?) psk:`companion`) and navigate to `/home/pi/nav`. Run `tail -f unicast.txt` to monitor any me3ssages recieved from the melt stake. Run 
-`send_command.py <BEACON_ID> DRILL 50 50` 
+For long-term deployment, hand-load melt stake onto Walrus (delivery ROV). SSH into Walrus (`pi@192.168.1.3`(?) psk:`companion`) and navigate to `/home/pi/nav`. Run `tail -f unicast.txt` to monitor for any messages recieved from the melt stake. Run 
+`send_command.py <BEACON_ID> DRILL 25 25` 
 when in range of the ice face (see interfacing section for more details). Once both ice screws are fully seated in the ice, run 
 `send_command.py <BEACON_ID> OFF` 
 `send_command.py <BEACON_ID> SETROT 0 0` 
@@ -25,7 +25,7 @@ On confirming counters have been reset (`send_command.py <BEACON_ID> DATA ROT`),
 Melt stake will send rotation and ping data automatically every 60 seconds. The data and frequency can be adjusted in `/home/pi/nav/config.yaml`
 
 # Over current protection
-Each of the motors are equipped with an ACS712 current sensor. If at any point this sensor detects a current draw at or exceeding 13 amps, the motor will enter a cooldown pause function for 300 seconds. Both of these values can be adjusted as arguments to the ADC class (`current_limit` and `over_current_pause_time`, respectively). This cooldown function serves two purposes: It protects the gear box from excessive internal stress, and also works as a feedback mechanism to mark when the ice screws have fully seated into the ice.
+Each of the motors are equipped with an ACS712 current sensor. If at any point this sensor detects a current draw at or exceeding 13 amps (user adjustable, `current_limit` in the ADC class), the motor will auto-stop.
 
 # Arguments
 There are two modes of operation of the melt stake, specified by the tag `-m`:
@@ -33,7 +33,6 @@ There are two modes of operation of the melt stake, specified by the tag `-m`:
 - `debug` : motor speed is reduced to 20%, the beacon input is replaced with command line input, and the release protocol is not called on exiting the code.
 
 The melt stake device ID is specified by the tag `-d`. Currently only supports `02` and `03`.
-
 
 # Interfacing
 Commands to the melt stake are sent through acoustic beacons. To transmit a command run 
@@ -43,8 +42,9 @@ Where `<BEACON_ID>` corresponds to the receiving beacon ID number on the melt st
 - `209` for melt stake 03
 and `<COMMAND>` is a command from the following list of options:
 - `OFF` : power down all motors and kill any other currently running operations.
-- `DRILL <ROTATIONS_1> <ROTATIONS_2> ... <ROTATIONS_n>` : Turn motor 1,2,...,n some integer number of rotations CW (pos) or CCW(neg). For long term deployment input a very large number.
+- `DRILL <ROTATIONS_1> <ROTATIONS_2> ... <ROTATIONS_n>` : Turn motor 1,2,...,n some integer number of rotations CW (pos) or CCW(neg).
 - `RELEASE` : Turns all motors CCW for 50 rotations. Used to release melt stake from ice.
+- `AUTONOMOUS <` : For autonomous field deployment. This command is to be called once the melt stake has been manually set into the ice. This operation will continuously attempt to drill into the ice a set number of rotations, sleeping for a set amount of time between attempts. 
 - `LIGHT <BRIGHTNESS>` : adjust the light brightness level. `<BRIGHTNESS>` is a number between 0 and 100. Defaults to 50%.
 - `SETROT <ROTATIONS_1> <ROTATIONS_2> ... <ROTATIONS_n>` : Manually overwrite the saved rotation tracking count for each motor.  To leave a motor's rotation counter un-altered, use input `-1` for that motor. 
 This is a useful command for zeroing the rotation count following intial deployment. Note: this requires sending a preceding `OFF` command then re-starting a `DRILL` operation

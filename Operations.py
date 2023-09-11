@@ -22,6 +22,7 @@ class Operations:
             self.speed = 0.2
         else:
             self.speed = 0.6
+        self.SOS_flag = False
 
 
     def DRILL(self, motors, target_turns):  
@@ -52,7 +53,7 @@ class Operations:
                 if not done:
                     if dir * (targ - curr) <= 0 or motor.overdrawn:  # if target is reached, or if overcurrent 
                         target_reached[motor_no] = True
-                        motor.ChangeSpeed(0, smoothed=False)  # turn motors off=
+                        motor.ChangeSpeed(0, smoothed=False)  # turn motors off
                     else:
                         motor.ChangeSpeed(dir * self.speed, smoothed=True)  # update motor speed
 
@@ -65,13 +66,55 @@ class Operations:
         # Once we reach our target turns, set all speeds to zero and break
         self.OFF(motors)
         return
+    
+    def AUTONOMOUS(self, motors, deployment_time):
+        # operation for autonomous deployment
+        # try to drill in x rotations every y minutes
+
+        def deployment_timer(deployment_time):
+
+            while True:
+                time.sleep(1)
+
+                if (time.time()-init_time) > (deployment_time*3600):
+                    break
+
+            return
+
+        rotations_per_drill = 20
+        time_between_drills = 20 # minutes
+
+        self.OFF(motors)
+
+        # tare rotation tracker
+        self.SETROT(motors, [0,0])
+
+        init_time = time.time()
+        last_drill_time = init_time
+
+        while (time.time()-init_time) > (deployment_time*3600) and not self.SOS_flag:
+
+            time.sleep(0.1)
+
+            # wait specified time between drill attempts
+            if (time.time()-last_drill_time) > (time_between_drills*60): 
+                # try drilling in. 
+                # For both screws this will either do the full 20 rotations or over-current out
+                Thread(daemon=True, target=self.DRILL, args=(motors, [rotations_per_drill]*2 )).start()
+                last_drill_time = time.time()
+                logging.info("AUTONOMOUS DRILLING")
+
+
+        self.OFF(motors)
+
+        return
 
     def RELEASE(self, motors, arguments=None):  
         # release unit from ice (note: approx 36 rotations for length of ice screw)
-        # this function will first read most recent pressure measurements, then if both
-        #    1) depth is greater than 0.5 meters
-        #    2) rate of change of depth is less than 0.1 m/s (i.e. meltstake is not rising)
-        # it will try to release 10 times, then give up.
+        # this function will first read most recent pressure measurements, then if
+        # depth is greater than 0.5 meters
+        # If number of rotations is not increasing (ie screws are stuck) try
+        # drilling into ice 5 rotations, then back out. (this can help loosen ice)
 
         def read_n_to_last_line(filename, n = 1):
             """Returns the nth before last line of a file (n=1 gives last line)"""
@@ -133,31 +176,44 @@ class Operations:
         Thread(daemon=True, target=check_if_floating).start()
         time.sleep(0.1)
 
-        self.OFF(motors)
-
         loops = 0
+        in_attempts = -1
         wait_time = 1
+        self.OFF(motors)
         Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
         while True:
             
-            # if we're below the surface and not rising, try to drill out
+            # if we're below the surface, try to drill out
             if self.stuck: 
                 
                 time.sleep(wait_time)
-                logging.info("LOOP: "+str(loops))
 
-                if loops*wait_time > 20: # check that # of rotations are increasing
-                    loops = 0
-                    [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
-                    if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
-                        # attempt to drill in 5 turns on both stakes (this sometimes helps loosen the ice)
-                        self.OFF(motors) # kill t_release
-                        time.sleep(1)
-                        Thread(daemon=True, target=self.DRILL, args=(motors, [5, 5] )).start()
-                        time.sleep(5)
-                        self.OFF(motors)
-                        time.sleep(1)
-                        Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start()
+                try:
+                    # every 20 seconds check if # of rotations are increasing:
+                    if loops*wait_time > 20: 
+                        loops = 0
+                        [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
+                        if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
+                            # attempt to drill in 5 turns (this sometimes helps loosen the ice)
+                            # alternate between left, right, and both drilling in
+                            in_attempts = (in_attempts + 1) % 3
+
+                            if in_attempts == 1:
+                                drill_in = [5, 0]
+                            elif in_attempts == 2:
+                                drill_in = [0, 5]
+                            else:
+                                drill_in = [5, 5]
+
+                            self.OFF(motors) # stop drill out
+                            time.sleep(0.5)
+                            Thread(daemon=True, target=self.DRILL, args=(motors, drill_in)).start() # start drill in
+                            time.sleep(5)
+                            self.OFF(motors) # stop drill in
+                            time.sleep(0.5)
+                            Thread(daemon=True, target=self.DRILL, args=(motors, [-1000, -1000] )).start() # resume drill out
+                except Exception:
+                    pass
                 
             else:
                 break

@@ -125,10 +125,14 @@ def main(mode):
             logging.info(traceback.format_exc())
             break
 
+    commands.SOS_flag = True # this flag tells AUTONOMOUS operation subroutine to exit
+
     # set all motors & lights to off before exiting code
     for i in range(len(motors)):
         motors[i].OFF() 
     light.AdjustBrightness(0.0)
+
+    time.sleep(1) # give some time for any currently running operations to wrap up
 
     # If we're in deployment mode begin a RELEASE thread
     if mode != 'debug':
@@ -143,7 +147,7 @@ def main(mode):
     else:
         SOS_msg = "UNKNOWN ERROR"
     
-    logging.info(SOS_msg)
+    
     def SOSblink():
         # init LED GPIO
         SOSled = DigitalInOut(board.D11)
@@ -154,8 +158,12 @@ def main(mode):
             SOSled.value = False
             time.sleep(0.1)
     Thread(daemon=True, target=SOSblink).start()
+
+
     while True:
         try:
+            beacon.Transmit_Message("SOS")
+            time.sleep(5)
             beacon.Transmit_Message(SOS_msg)
         except Exception:
             pass
