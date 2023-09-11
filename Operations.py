@@ -23,6 +23,7 @@ class Operations:
         else:
             self.speed = 0.6
         self.SOS_flag = False
+        self.stopauto = False
 
 
     def DRILL(self, motors, target_turns):  
@@ -85,8 +86,8 @@ class Operations:
         init_time = time.time()
         last_drill_time = init_time
         
-        self.disarm = False
-        while ((time.time()-init_time) < (deployment_time*60)) and not self.SOS_flag and not self.disarm:
+        self.stopauto = False
+        while ((time.time()-init_time) < (deployment_time*60)) and not self.SOS_flag and not self.stopauto:
 
             time.sleep(0.1)
 
@@ -102,6 +103,9 @@ class Operations:
         self.OFF(motors)
 
         return
+
+    def STOPAUTO(self):
+        self.stopauto = True
 
     def RELEASE(self, motors, arguments=None):  
         # release unit from ice (note: approx 36 rotations for length of ice screw)

@@ -99,6 +99,9 @@ def main(mode):
 
                 if command == 'OFF':
                     commands.OFF(motors)
+                
+                elif command == 'STOPAUTO':
+                    commands.STOPAUTO(motors)
 
                 elif command == 'DATA':
                     commands.DATA(data, beacon, arguments)
@@ -114,7 +117,7 @@ def main(mode):
                         t_operation = t_new
                         t_operation.start()
                     else:
-                        beacon.Transmit_Message("BUSY -- SEND OFF TO CLEAR")
+                        beacon.Transmit_Message("BUSY -- SEND OFF")
                         print("operation currently running... send 'OFF' to kill")
                 
                 beacon.strmsg = ''
