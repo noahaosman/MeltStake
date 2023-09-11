@@ -84,7 +84,8 @@ class Operations:
 
         init_time = time.time()
         last_drill_time = init_time
-
+        
+        self.disarm = False
         while ((time.time()-init_time) < (deployment_time*60)) and not self.SOS_flag and not self.disarm:
 
             time.sleep(0.1)
