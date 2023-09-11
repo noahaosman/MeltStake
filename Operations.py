@@ -67,7 +67,7 @@ class Operations:
         self.OFF(motors)
         return
     
-    def AUTONOMOUS(self, motors, deployment_time):
+    def AUTO(self, motors, deployment_time):
         # operation for autonomous deployment
         # try to drill in x rotations every y minutes
 
@@ -87,7 +87,7 @@ class Operations:
         init_time = time.time()
         last_drill_time = init_time
 
-        while ((time.time()-init_time) < (deployment_time*3600)) and not self.SOS_flag:
+        while ((time.time()-init_time) < (deployment_time*3600)) and not self.SOS_flag and not self.disarm:
 
             time.sleep(0.1)
 
