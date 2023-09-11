@@ -101,7 +101,7 @@ def main(mode):
                     commands.OFF(motors)
                 
                 elif command == 'STOPAUTO':
-                    commands.STOPAUTO(motors)
+                    commands.STOPAUTO()
 
                 elif command == 'DATA':
                     commands.DATA(data, beacon, arguments)

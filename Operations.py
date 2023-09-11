@@ -101,8 +101,9 @@ class Operations:
 
 
         self.OFF(motors)
-        time.sleep(1)
-        self.RELEASE(motors)
+        if not self.stopauto: # if we didnt manually stop AUTO, RELEASE from ice
+            time.sleep(1)
+            self.RELEASE(motors)
 
         return
 
