@@ -9,9 +9,30 @@ cat /etc/resolv.conf
 IP_FILE='/etc/dhcpcd.conf'
 read -r -d '' IP_LINE << EOM
 interface wlan0
+arping 10.0.1.1
+arping 10.0.0.1
+arping 192.168.0.1
+arping 198.168.1.1
+
+profile 10.0.1.1
 static ip_address=10.0.1.1$ARG1/24
 static routers=10.0.1.1
 static domain_name_servers=10.0.1.1
+
+profile 10.0.0.1
+static ip_address=10.0.0.1$ARG1/24
+static routers=10.0.0.1
+static domain_name_servers=10.0.0.1
+
+profile 192.168.0.1
+static ip_address=192.168.0.1.1$ARG1/24
+static routers=192.168.0.1
+static domain_name_servers=192.168.0.1
+
+profile 198.168.1.1
+static ip_address=198.168.1.1$ARG1/24
+static routers=198.168.1.1
+static domain_name_servers=198.168.1.1
 EOM
 echo "$IP_LINE" >> "$IP_FILE"
 
