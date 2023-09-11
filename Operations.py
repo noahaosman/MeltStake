@@ -71,18 +71,13 @@ class Operations:
         # operation for autonomous deployment
         # try to drill in x rotations every y minutes
 
-        def deployment_timer(deployment_time):
+        melt_rate = 2 #cm/hr
+        time_between_drills = 60 # minutes
 
-            while True:
-                time.sleep(1)
+        rotations_per_hour = melt_rate/0.63 
+        rotations_per_drill = rotations_per_hour/time_between_drills
 
-                if (time.time()-init_time) > (deployment_time*3600):
-                    break
-
-            return
-
-        rotations_per_drill = 20
-        time_between_drills = 20 # minutes
+        deployment_time = float(deployment_time[0])
 
         self.OFF(motors)
 
@@ -92,7 +87,7 @@ class Operations:
         init_time = time.time()
         last_drill_time = init_time
 
-        while (time.time()-init_time) > (deployment_time*3600) and not self.SOS_flag:
+        while ((time.time()-init_time) < (deployment_time*3600)) and not self.SOS_flag:
 
             time.sleep(0.1)
 
@@ -241,7 +236,7 @@ class Operations:
         set_turns.extend([None] * (len(motors) - len(set_turns)))  # pad end with None's if input was less than number of motors
         set_turns = set_turns[0:len(motors)]  # remove extra elements if larger than the number of motors
 
-        for motor, set_turn in motors, set_turns:
+        for motor, set_turn in zip(motors, set_turns):
             if set_turn != None:
                 motor.pulses = set_turn
 
@@ -251,8 +246,6 @@ class Operations:
         flt_spd = flt_spd[0]
         if flt_spd is not None and flt_spd > 0 and flt_spd < 1:
             self.speed = flt_spd
-
-
 
     def DATA(self, data, beacon, arguments=None):
         # send most recent data measurement via beacon tx
