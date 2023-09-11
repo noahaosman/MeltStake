@@ -101,6 +101,8 @@ class Operations:
 
 
         self.OFF(motors)
+        time.sleep(1)
+        self.RELEASE(motors)
 
         return
 
