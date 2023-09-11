@@ -23,7 +23,7 @@ class Operations:
         else:
             self.speed = 0.6
         self.SOS_flag = False
-        self.stopauto = False
+        self.stopauto = True
 
 
     def DRILL(self, motors, target_turns):  

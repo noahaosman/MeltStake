@@ -99,6 +99,8 @@ def main(mode):
 
                 if command == 'OFF':
                     commands.OFF(motors)
+                    if not commands.stopauto:
+                        commands.stopauto = True
                 
                 elif command == 'STOPAUTO':
                     commands.STOPAUTO()
