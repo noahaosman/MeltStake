@@ -6,6 +6,7 @@ import logging
 import traceback
 import ms5837
 import os
+import shlex # TODO pip3 install this if not default
 import re
 from datetime import datetime, timezone
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
@@ -72,6 +73,8 @@ class Operations:
         # operation for autonomous deployment
         # try to drill in 10 rotations every deployment_intv_time[0] minutes
         # release after deployment_intv_time[1] minutes
+        # 
+        # input: AUTO <time between drills (minutes)> <total deployment time (minutes)>
 
         time_between_drills = float(deployment_intv_time[0])
         deployment_time = float(deployment_intv_time[1])
@@ -278,3 +281,36 @@ class Operations:
 
         return
 
+    def CLA(self, battery, new_current_limit):
+        # adjust the current limit on the motors
+
+        battery.current_limit = new_current_limit
+
+        return
+
+    def CAM(self, new_state):
+
+        print("Listing all running service")
+        
+        # Look through all the running service for camera.service
+        # read it's current on/off status
+        for line in os.popen("systemctl --type=service --state=running"):
+            services = line.split()
+            if "camera.service" in services:
+                if "active" and "running" in services:
+                    current_state = 1
+                else:
+                    current_state = 0
+                break
+        
+        if current_state != new_state:
+            if new_state == 0: # turn off cameras
+                comd = "stop"
+            elif new_state == 1: # turn on cameras
+                comd = "start"
+            
+            os.popen("sudo systemctl "+comd+" camera.service")    
+
+
+
+        return

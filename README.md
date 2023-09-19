@@ -11,7 +11,7 @@ The simplest installation method is via git:
 - `sudo bash setup.sh '00'  # replace '00' with the melt stake ID number`
 
 The default IP address for all Raspberry pi on a shared network can be found by running:
-- `arp -n -a | grep -i '28:\|B8:\|D8:\|DC:\|E4:'`
+- `arp -n -a | grep -i ' 28:\| B8:\| D8:\| DC:\| E4:'`
 
 # Standard Operating Procedure
 For long-term deployment, hand-load melt stake onto Walrus (delivery ROV). SSH into Walrus (`pi@192.168.1.3`(?) psk:`companion`) and navigate to `/home/pi/nav`. Run `tail -f unicast.txt` to monitor for any messages recieved from the melt stake. Run 

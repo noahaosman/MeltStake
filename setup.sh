@@ -49,7 +49,8 @@ update-rc.d -f fake-hwclock remove
 sed -i '/systemd/,+2 d' /lib/udev/hwclock-set
 hwclock -r  # reads hwclock time
 hwclock -w  # sets hwclock to the current system time
-# on initial boot set to current time eg: sudo date -u -s '22 Jun 2023 18:34:00' 
+# on initial boot set to current time eg: 
+#    sudo date -u -s '22 Jun 2023 18:34:00' 
 # timedatectl shows system time and hwclock time
 
 
@@ -160,19 +161,20 @@ cd /home/pi/packages/ping-python
 python3 setup.py install
 
 # install camera code
-git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git /home/pi/packages/camera_capture
-bash /home/pi/camera_capture/setup.sh
-apt-get install -y mpv # this package lets you view video in terminal over ssh (bad quality!!) mpv --no-config --vo=tct <video file>
+git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git /home/pi/camera_capture
+yes | bash /home/pi/camera_capture/setup.sh
+apt-get install -y mpv # this package lets you view video in terminal over ssh (bad quality!!) 
+#         mpv --no-config --vo=tct <video file>
 
 # install beacon code
 git clone --single-branch --branch jasmine https://github.com/RoboticOceanographicSurfaceSampler/acoustic-beacons.git /home/pi/nav
+chown -R pi:pi /home/pi/nav
 cd /home/pi/nav
 bash /home/pi/nav/install.sh
 sed -i '/StandardOutput=syslog/ i Restart=always\
 RestartSec=30' /etc/systemd/system/beacons.service
 systemctl daemon-reload
-systemctl restart beacons
-chown -R pi:pi /home/pi/nav
+systemctl enable beacons
 
 
 #---Service Scripts---
