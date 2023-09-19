@@ -284,6 +284,8 @@ class Operations:
     def CLA(self, battery, new_current_limit):
         # adjust the current limit on the motors
 
+        new_current_limit = float(new_current_limit[0])
+
         battery.current_limit = new_current_limit
 
         return
