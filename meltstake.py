@@ -105,6 +105,12 @@ def main(mode):
                 elif command == 'STOPAUTO':
                     commands.STOPAUTO()
 
+                elif command == 'CAM': # camera on/off
+                    commands.CAM(arguments)
+
+                elif command == 'CLA':
+                    commands.CLA(battery, arguments)
+
                 elif command == 'DATA':
                     commands.DATA(data, beacon, arguments)
 
