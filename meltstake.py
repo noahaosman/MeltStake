@@ -105,9 +105,6 @@ def main(mode):
                 elif command == 'STOPAUTO':
                     commands.STOPAUTO()
 
-                elif command == 'CAM': # camera on/off
-                    commands.CAM(arguments)
-
                 elif command == 'CLA':
                     commands.CLA(battery, arguments)
 
@@ -125,7 +122,7 @@ def main(mode):
                         t_operation = t_new
                         t_operation.start()
                     else:
-                        beacon.Transmit_Message("BUSY -- SEND OFF")
+                        beacon.Transmit_Message("BUSY")
                         print("operation currently running... send 'OFF' to kill")
                 
                 beacon.strmsg = ''

@@ -289,28 +289,28 @@ class Operations:
 
         return
 
-    def CAM(self, new_state):
+    # def CAM(self, new_state):
         
-        # Look through all the running service for camera.service
-        # read it's current on/off status
-        current_state = 0 # if this is not overwritten, the service doesnt exist
-        for line in os.popen("systemctl --type=service --state=running"):
-            services = line.split()
-            print(services)
-            if "camera.service" in services:
-                if "active" and "running" in services:
-                    current_state = 1
-                else:
-                    current_state = 0
-                break
+    #     # Look through all the running service for camera.service
+    #     # read it's current on/off status
+    #     current_state = 0 # if this is not overwritten, the service doesnt exist
+    #     for line in os.popen("systemctl --type=service --state=running"):
+    #         services = line.split()
+    #         print(services)
+    #         if "camera.service" in services:
+    #             if "active" and "running" in services:
+    #                 current_state = 1
+    #             else:
+    #                 current_state = 0
+    #             break
 
-        if current_state != new_state:
-            if new_state == 0: # turn off cameras
-                comd = "stop"
-            elif new_state == 1: # turn on cameras
-                comd = "start"
+    #     if current_state != new_state:
+    #         if new_state == 0: # turn off cameras
+    #             comd = "stop"
+    #         elif new_state == 1: # turn on cameras
+    #             comd = "start"
             
-            os.popen("sudo systemctl "+comd+" camera.service")    
+    #         os.popen("sudo systemctl "+comd+" camera.service")    
 
 
-        return
+    #     return
