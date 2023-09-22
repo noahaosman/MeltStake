@@ -71,15 +71,14 @@ class Operations:
     
     def AUTO(self, motors, deployment_intv_time):
         # operation for autonomous deployment
-        # try to drill in 10 rotations every deployment_intv_time[0] minutes
-        # release after deployment_intv_time[1] minutes
+        # try to drill in arg0 rotations every arg1 minutes
+        # release after arg2 minutes
         # 
-        # input: AUTO <time between drills (minutes)> <total deployment time (minutes)>
+        # input: AUTO <rotations per> <time between drills (minutes)> <total deployment time (minutes)>
 
-        time_between_drills = float(deployment_intv_time[0])
-        deployment_time = float(deployment_intv_time[1])
-
-        rotations_per_drill = 10
+        rotations_per_drill = float(deployment_intv_time[0])
+        time_between_drills = float(deployment_intv_time[1])
+        deployment_time = float(deployment_intv_time[2])
 
         self.OFF(motors)
 
