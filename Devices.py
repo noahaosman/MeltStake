@@ -121,7 +121,7 @@ class Motor:
     def __init__(
         self,
         motor_no,
-        del_perc_speed=100  # avg. change in % speed per second (dec for more smoothing)
+        del_perc_speed=200  # avg. change in % speed per second (dec for more smoothing)
     ):
         self.motor_no = motor_no
         self.del_perc_speed = del_perc_speed

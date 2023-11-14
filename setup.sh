@@ -37,23 +37,6 @@ EOM
 echo "$IP_LINE" >> "$IP_FILE"
 
 
-# Setup RTC
-wget https://raw.githubusercontent.com/raspberrypi/linux/rpi-4.14.y/arch/arm/boot/dts/overlays/i2c-rtc-gpio-overlay.dts
-dtc -I dts -O dtb -o i2c-rtc-gpio.dtbo i2c-rtc-gpio-overlay.dts
-cp i2c-rtc-gpio.dtbo /boot/overlays
-rm i2c*
-timedatectl set-timezone UTC
-
-apt -y remove fake-hwclock
-update-rc.d -f fake-hwclock remove
-sed -i '/systemd/,+2 d' /lib/udev/hwclock-set
-hwclock -r  # reads hwclock time
-hwclock -w  # sets hwclock to the current system time
-# on initial boot set to current time eg: 
-#    sudo date -u -s '22 Jun 2023 18:34:00' 
-# timedatectl shows system time and hwclock time
-
-
 # Configure interfacing options
 INTERFACE_FILE='/boot/config.txt'
 read -r -d '' INTERFACE_LINE << EOM
@@ -73,7 +56,6 @@ raspi-config nonint do_serial 2
 
 # enable i2c
 raspi-config nonint do_i2c 0
-
 
 
 # Configure wifi network settings
@@ -126,6 +108,23 @@ apt-get install -y python3-smbus2
 pip install smbus2
 pip3 install pyyaml
 pip3 install pynmea2
+
+
+# Setup RTC
+wget https://raw.githubusercontent.com/raspberrypi/linux/rpi-4.14.y/arch/arm/boot/dts/overlays/i2c-rtc-gpio-overlay.dts
+dtc -I dts -O dtb -o i2c-rtc-gpio.dtbo i2c-rtc-gpio-overlay.dts
+cp i2c-rtc-gpio.dtbo /boot/overlays
+rm i2c*
+timedatectl set-timezone UTC
+apt -y remove fake-hwclock
+update-rc.d -f fake-hwclock remove
+sed -i '/systemd/,+2 d' /lib/udev/hwclock-set
+hwclock -r  # reads hwclock time
+hwclock -w  # sets hwclock to the current system time
+# on initial boot set to current time eg: 
+#    sudo date -u -s '22 Jun 2023 18:34:00' 
+# timedatectl shows system time and hwclock time
+
 
 # initialize data directory
 mkdir /home/pi/data
