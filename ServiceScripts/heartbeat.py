@@ -15,6 +15,6 @@ while True:
     led.value = True
     time.sleep(1)
     led.value = False
-    time.sleep(0.5)
+    time.sleep(1)
 
     

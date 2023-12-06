@@ -160,7 +160,7 @@ cd /home/pi/packages/ping-python
 python3 setup.py install
 
 # install camera code
-git clone https://github.com/RoboticOceanographicSurfaceSampler/camera_capture.git /home/pi/camera_capture
+git clone https://github.com/noahaosman/camera_capture.git /home/pi/camera_capture
 yes | bash /home/pi/camera_capture/setup.sh
 apt-get install -y mpv # this package lets you view video in terminal over ssh (bad quality!!) 
 #         mpv --no-config --vo=tct <video file>

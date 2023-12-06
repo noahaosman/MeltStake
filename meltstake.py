@@ -1,183 +1,908 @@
 # pyright: reportMissingImports=false
 import logging
+import re
 import time
-import argparse
+import numpy as np
+from math import sin, cos, asin, atan2, sqrt, pi
 from threading import Thread
 import traceback
+import socket
+from datetime import datetime, timezone
+import inspect
 import board
+from brping import Ping1D      
+import ms5837
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
+from adafruit_extended_bus import ExtendedI2C as I2C
+from adafruit_pca9685 import PCA9685  # PCA9685 module (PWM driver)
+import adafruit_ads1x15.ads1115 as ADS  # ADS1115 module (ADC)
+from adafruit_ads1x15.analog_in import AnalogIn
+from icm20602 import ICM20602
+from mmc5983 import MMC5983
 
-import Devices
-from data_storage import Data
-from Operations import Operations
+from Clock_Speed import CLK_SPD
 
+# assign log file
+logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
+                    format="%(asctime)-15s %(levelname)-8s %(message)s")
 
-def main(mode):
-
-    # assign log file
-    logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
-                        format="%(asctime)-15s %(levelname)-8s %(message)s")
-
-    # Initialize classes
-    battery = Devices.ADC()
-    motors = [Devices.Motor(0), Devices.Motor(1)]
-    light = Devices.SubLight()
-    data = Data()
-    leaksenor = Devices.LeakDetection()
-
-    print("opening threads...")
-    t_ARMED = []
-    t_count_pulses = []
-    for i in range(len(motors)):
-        Thread(daemon=True, target=motors[i].ARMED).start()
-        Thread(daemon=True, target=motors[i].count_pulses).start()
-    Thread(daemon=True, target=battery.MonitorVoltageCurrent, args=(len(motors), motors, )).start()
-    Thread(daemon=True, target=leaksenor.Monitor).start()
-    light.AdjustBrightness(0)  # turn on sub light
-
-    # SAVE DATA:
-
-    SAMPLE_RATE = 10  # data sampling rate in Hz
-    Thread(daemon=True, target=data.CurrentDraw, args=(battery, motors, SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Rotations, args=(motors, SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Ping, args=(SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Orientation, args=(SAMPLE_RATE,)).start()
-    Thread(daemon=True, target=data.Pressure, args=(SAMPLE_RATE,)).start()
-
-    beacon = Devices.Beacon()
-    Thread(daemon=True, target=beacon.Receive_Message).start()
-
-    commands = Operations(mode, motors)
-    t_operation = Thread()  # initialize main thread variable
-    known_commands = [attribute for attribute in dir(commands) if \
-                      callable(getattr(commands, attribute)) and attribute.startswith('__') is False]
-    print(known_commands)
-
-    def blink_LED2():
-        led2 = DigitalInOut(board.D25)
-        led2.direction = Direction.OUTPUT
-        while True:
-            led2.value = True
-            time.sleep(1)
-            led2.value = False
-            time.sleep(0.5)
-    Thread(daemon=True, target=blink_LED2).start()
-
-    # init warning LED GPIO
-    SOSled = DigitalInOut(board.D11)
-    SOSled.direction = Direction.OUTPUT
-    SOSled.value = True
-
-    if mode == 'debug':
-        print('COMMAND OPTIONS:')
-        print('    - DRILL ARG1 ARG2 :: drill motor 1 ARG1 turns and motor 2 ARG2 turns')
-        print('    - RELEASE :: release melt stake from ice face')
-        print('    - OFF :: turn all motors off')
-        print('    - SETSPD ARG1 :: set motor speed (0.0 < ARG1 < 1.0)')
-
-    startup_time = 3
-    time.sleep(startup_time)
-
-    # MAIN LOOP:
-    while not battery.under_voltage and not leaksenor.State:
-
-        try:
-            time.sleep(0.05)
-
-            ### Receive/transmit beacon messages
-            if mode == 'debug':
-                beacon.strmsg = input("input: ")  # Terminal input for testing.
-
-            if beacon.strmsg != '':
-
-                msg = beacon.strmsg
-                beacon.Transmit_Message(msg)  # echo back the message
-                
-                msg_split = msg.split()
-                command = msg_split[0]
-                arguments = [msg_split[i] for i in range(1,len(msg_split))]
-
-                if command == 'OFF':
-                    commands.OFF(motors)
-                    if not commands.stopauto:
-                        commands.stopauto = True
-                
-                elif command == 'STOPAUTO':
-                    commands.STOPAUTO()
-
-                elif command == 'CLA':
-                    commands.CLA(battery, arguments)
-
-                elif command == 'DATA':
-                    commands.DATA(data, beacon, arguments)
-
-                elif command == 'LIGHT':
-                    flt_in = float(arguments[0])
-                    light.AdjustBrightness(flt_in/100)
-
-                elif command in known_commands:  # any other commands will begin as a thread
-                    t_new = Thread(daemon=True, target=eval("commands."+command), args=(motors, arguments, ))
-                    
-                    if not t_operation.is_alive():  # don't overwrite any currently running operations
-                        t_operation = t_new
-                        t_operation.start()
-                    else:
-                        beacon.Transmit_Message("BUSY")
-                        print("operation currently running... send 'OFF' to kill")
-                
-                beacon.strmsg = ''
+# get device ID_number from static IP
+try:
+    f = open("/etc/dhcpcd.conf", "r")
+    sstrn = 'static ip_address=10.0.1.1'
+    for line in f:
+        if line.startswith(sstrn):
+            DEV_NO = re.split(sstrn+'|/',  line)[1]
+except Exception:
+    DEV_NO = '00'
 
 
-        except Exception:
-            logging.info("--- RUNTIME ERROR: ---")
-            logging.info(traceback.format_exc())
-            break
-
-    commands.SOS_flag = True # this flag tells AUTONOMOUS operation subroutine to exit
-
-    # set all motors & lights to off before exiting code
-    for i in range(len(motors)):
-        motors[i].OFF() 
-    light.AdjustBrightness(0.0)
-
-    time.sleep(1) # give some time for any currently running operations to wrap up
-
-    # If we're in deployment mode begin a RELEASE thread
-    if mode != 'debug':
-        Thread(daemon=True, target=commands.RELEASE, args=(motors,)).start()
-
-    # transmit SOS call via beacon every 5 seconds
-    if leaksenor.State:
-        SOS_msg = "LEAK DETECTED!"
-    elif battery.under_voltage:
-        voltage = battery.voltage/battery.BATT_VOLT_DIV_RATIO
-        SOS_msg = "LOW BATTERY! : "+f"{voltage:.1f}"+"V"
+"""
+Create a simple PCA9685 class instance.
+"""
+try:
+    I2C_BUS_PCA = I2C(4)
+except Exception as error:
+    LOG_STRING = "failed to initialize i2c communication on bus 4:, " + error
+    logging.error(LOG_STRING)
+try:
+    # create PCA class
+    PCA = PCA9685(I2C_BUS_PCA)
+    # arm PCA
+    PWM_OE = DigitalInOut(board.D26)
+    PWM_OE.direction = Direction.OUTPUT
+    PWM_OE.value = False  # armed
+    # set clock speed (Default 25000000)
+    if DEV_NO in CLK_SPD:
+        CLK_SPD = CLK_SPD[DEV_NO]
     else:
-        SOS_msg = "UNKNOWN ERROR"
+        CLK_SPD = CLK_SPD['00']
+    PCA.reference_clock_speed = CLK_SPD
+    # Set the PWM duty cycle.
+    PCA.frequency = 200
+    # Create funtion for interfacing with Blue Robotics components
+    def WRITE_DUTY_CYCLE(channel:int, value:float) -> bool:
+        """ Write speed value to the PCA channel associated with this motor ID """
+        if 0 <= channel <= 15:
+            if -1.0 <= value <= 1.0:
+                PCA.channels[channel].duty_cycle = \
+                    int(PCA.frequency*(10**-6)*(1500+400*value)*65535)
+                return True
+            else:
+                logging.error("Invalid motor speed: %s. Value must be between -1 and +1.", str(value))
+                return False
+        else:
+            logging.error("Invalid PCA channel: %s. PCA9685 has 16 channels (0 -> 15).", str(value))
+            return False
+except Exception as error:
+    LOG_STRING = "failed to initialize PCA9685 driver:, " + error
+    logging.error(LOG_STRING)
     
     
-    def SOSblink():
-        # init LED GPIO
-        SOSled = DigitalInOut(board.D11)
-        SOSled.direction = Direction.OUTPUT
+"""
+Create an ADS1115 class instance.
+"""
+CURR_DRAW_DIV_RATIO = 1  # no volt divider
+BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
+# Initialize i2c bus.
+try:
+    I2C_BUS_ADS = I2C(22)
+except Exception as error:
+    LOG_STRING = "failed to initialize i2c communication on bus 22:, " + error
+    logging.error(LOG_STRING)
+try:
+    ads = ADS.ADS1115(I2C_BUS_ADS, address=0x48)
+    
+    ADS_VOLTAGE = [0,0,0,0]
+    def monitor_ADS():
         while True:
-            SOSled.value = True
+            for i in range(4):
+                reading = AnalogIn(ads, eval("ADS.P"+str(i)))
+                ADS_VOLTAGE[i] = reading.voltage
             time.sleep(0.1)
-            SOSled.value = False
-            time.sleep(0.1)
-    Thread(daemon=True, target=SOSblink).start()
+    t_monitor_ADS = Thread(target=monitor_ADS, daemon=True)
+    t_monitor_ADS.start()
+except Exception as error:
+    LOG_STRING = "failed to initialize ADS1115 driver:, " + error
+    logging.error(LOG_STRING)
+
+def bound(value, lwr=0, upr=1):
+    """ useful function to limit a value to range [lwr, upr] """
+    return max(min(upr, value), lwr)
+
+def timer(func):   
+    """ Wrapper for functions. Will return execution time in seconds """ 
+    def inner(*args, **kwargs):
+        t0 = time.time()
+        result = func(*args, **kwargs)
+        t1 = time.time()
+        execution_time = t1-t0
+        return execution_time
+    
+    return inner
 
 
-    while True:
+class LED:
+    
+    __pin_no = 25
+    
+    def __init__(self, pin_no=__pin_no):
+        self.pin_no = pin_no
+        self.__led = DigitalInOut(eval("board.D"+str(self.pin_no)))
+        self.__led.direction = Direction.OUTPUT
+    
+    @property
+    def pin_no(self):
+        """Gets pin number of LED"""
+        return self.__pin_no
+    
+    @pin_no.setter
+    def pin_no(self, value=int) -> bool:
+        if 1 <= value <= 26:
+            self.__pin_no = value
+            return True
+        else:
+            logging.warning("GPIO pin number %s undefined on Raspberry Pi 4.", str(value))
+            return False
+    
+    def off(self):
+        self.__led.value = True
+    
+    def on(self):
+        self.__led.value = False
+    
+    def blink(self, frequency:float=2.):
+        """Continuously blink the LED at some user-defined frequency.
+
+        Args:
+            frequency (float, optional): Frequency of blinking in Hz. Defaults to 2.
+        """
+        def blink_loop():
+            while True:
+                self.on()
+                time.sleep(1/frequency)
+                self.off()
+                time.sleep(1/frequency)
+        t_blink = Thread(target=blink_loop, daemon=True)
+        t_blink.start()
+
+
+class Battery:
+    """
+    Class for monitoring battery voltage
+    """
+    __voltage = 0.0
+    __voltage_limit = 13.5
+    __under_voltage = False
+
+    def __init__(self, voltage_limit=__voltage_limit):
+        self.voltage_limit = voltage_limit
+        
+        t_monitor_voltage = Thread(target=self.monitor_voltage, daemon=True)
+        t_monitor_voltage.start()
+        
+    @property
+    def voltage(self):
+        """ Gets voltage """
+        return self.__voltage
+
+    @voltage.setter
+    def voltage(self, value:float) -> bool:
+        """ Sets latest measured voltage """
+        if 0 <= value <= 16.9:
+            self.__voltage = value
+            return True
+        else:
+            LOG_STRING = "Battery voltage reading outside of expected limits: " + str(value)
+            logging.warning(LOG_STRING)
+            return False
+            
+    @property
+    def voltage_limit(self):
+        """ Gets voltage limit """
+        return self.__voltage_limit
+
+    @voltage_limit.setter
+    def voltage_limit(self, value:float) -> bool:
+        """ Sets the voltage limit """
+        if 12.8 <= value <= 16.8:
+            self.__voltage = value
+            return True
+        else:
+            LOG_STRING = "Minimum battery voltage limit set to a value outside of expected range:, " + str(value)
+            logging.warning(LOG_STRING)
+            return False
+            
+    @property
+    def under_voltage(self):
+        """ Gets battery charge state """
+        return self.__under_voltage
+
+    @under_voltage.setter
+    def under_voltage(self, value:bool) -> bool:
+        """ Sets battery charge state """
+        self.__under_voltage = value
+        return True
+    
+    # -----------------------------
+    
+    def monitor_voltage(self):
+        """ Thread to monitor voltage and update battery charge state """
+        while True:
+            self.voltage = ADS_VOLTAGE[3] * BATT_VOLT_DIV_RATIO
+            if self.voltage <= self.voltage_limit:
+                self.under_voltage = True
+            else:
+                self.under_voltage = False
+            time.sleep(0.25)
+    
+
+class LeakDetection:
+    
+    __state = False
+
+    def __init__(self):
+        t_monitor_leak = Thread(target=self.monitor_leak, daemon=True)
+        t_monitor_leak.start()
+    
+    @property
+    def state(self):
+        """Gets leak state"""
+        return self.__state
+
+    @state.setter
+    def state(self, value:bool) -> bool:
+        """Sets the leak state"""
+        self.__state = value
+        
+    def monitor_leak(self):
+        """ Monitors and updates leak state. 
+        This value is set in LeakState.txt by LeakDetection.service
+        """
+        while True:
+            with open('/home/pi/MeltStake/ServiceScripts/LeakState.txt', "r") as f: 
+                self.State = eval(f.readline())
+            time.sleep(0.25)
+            
+
+class Drill:
+    """
+    Provides a model for Blue Robotics T200 gearbox-reduced ice screw
+    """
+    __ID_number = 0
+    __speed = 0
+    __current_speed = 1 # set high so motors will initialize to zero speed
+    __current_limit = 14
+    __current_draw = 0
+    __overdrawn = False
+    __pulses = 0
+
+    def __init__(self, ID_number, current_limit=__current_limit):
+        # initialize drill object
+        self.ID_number = ID_number
+        self.current_limit = current_limit
+        
+        # start threads --------------------
+        t_speed_manager = Thread(target=self.update_speed, daemon=True)
+        t_speed_manager.start()
+
+        t_current_monitor = Thread(target=self.monitor_current, daemon=True)
+        t_current_monitor.start()
+
+        t_count_pulses = Thread(target=self.count_pulses, daemon=True)
+        t_count_pulses.start()
+
+    @property
+    def ID_number(self):
+        """ Gets the motor ID_number """
+        return self.__ID_number
+    
+    @ID_number.setter
+    def ID_number(self, value:int) -> bool:
+        """ sets the motor ID_number """
+        if 0 <= value <= 1:
+            self.__ID_number = value
+            return True
+        else:
+            logging.error("Invalid motor ID_number: %s. Value must be 0 or 1.", str(value))
+            return False
+    
+    @property
+    def speed(self):
+        """ Gets the motor speed """
+        return self.__speed
+
+    @speed.setter
+    def speed(self, value:float) -> bool:
+        """ Sets the motor target speed """
+        if -1 < value < 1:
+            self.__speed = value
+            return True
+        else:
+            logging.error("Invalid motor speed request: %s. Value must be between -1.0 and 1.0", str(value))
+            return False
+        
+    @property
+    def current_speed(self):
+        """ Gets the current motor speed """
+        return self.__current_speed
+    
+    @current_speed.setter
+    def current_speed(self, value:float) -> bool:
+        """Sets the current motor speed"""
+        if -1 < value < 1:
+            self.__current_speed = value
+            return True
+        else:
+            logging.error("Invalid motor speed: %s. Value must be between -1.0 and 1.0", str(value))
+            return False
+    
+    @property
+    def current_limit(self):
+        """ Gets the current limit (Amps) """
+        return self.__current_limit
+    
+    @current_limit.setter
+    def current_limit(self, value:float) -> bool:
+        """ Sets the current limit (Amps) """
+        if value > 0.:
+            self.__current_limit = value
+            return True
+        else:
+            logging.error("Invalid curent limit: %s", str(value))
+            return False
+    
+    @property
+    def current_draw(self):
+        """Gets current draw"""
+        return self.__current_draw
+    
+    @current_draw.setter
+    def current_draw(self, value:float) -> bool:
+        self.__current_draw = abs(value)
+        return True
+    
+    @property
+    def overdrawn(self):
+        """ Gets the current limiting state """
+        return self.__overdrawn
+    
+    @overdrawn.setter
+    def overdrawn(self, value:bool) -> bool:
+        """ sets the current limiting state """
+        self.__overdrawn = value
+        return True
+    
+    @ property
+    def pulses(self):
+        """ Gets number of pulses """
+        return self.__pulses
+    
+    @pulses.setter
+    def pulses(self, value:int) -> bool:
+        """ Sets number of pulses """
+        if value >= 0:
+            self.__pulses = value
+            return True
+        else:
+            logging.error("Invalid pulse count: %s", str(value))
+            return False
+    
+    
+    # ----------------------------------
+        
+    def update_speed(self):
+        """ 
+        Function to smoothly move a value toward a time-varying target value.
+        This algorithm is a 1D analog of Reynold's steering in boid simulations.
+        The four parameters below were chosen to give behavior suitable for our specific use-case.
+        Modify with caution!
+        Note: This algorithm has been tuned s.t. 100 steps are needed to go 
+          from -1 --> +1. Change time step (dt) to modify smoothing sharpness.
+        """
+        Fmax = 0.002
+        Vmax = 0.027
+        r = 0.25
+        dt = 0.005
+        
+        V = 0
+        s = 0
+        while True:
+            if abs(self.current_speed - self.speed) > 0.01:
+                s0 = s
+                V0 = V
+                s_desired = self.speed
+                norm_dist = bound((s_desired - s)/r, -1, 1)
+                V_desired = norm_dist * Vmax
+                F_steering = bound(V_desired - V0, -Fmax, Fmax)
+                V = bound(V0 + F_steering, -Vmax, Vmax)
+                s = bound(s0 + V, -1, 1)
+                self.current_speed = s
+                WRITE_DUTY_CYCLE(self.ID_number, self.current_speed)
+                time.sleep(dt)
+            else:
+                time.sleep(0.25)
+    
+    def monitor_current(self):
+        """ Monitor current draw of motor, set speed to zero if it exceeds limit """
+        while True:
+            self.current_draw = 10 * (2.5 - ADS_VOLTAGE[self.ID_number] * CURR_DRAW_DIV_RATIO)
+            if self.current_draw > self.current_limit:
+                self.overdrawn = True
+                self.speed = 0.0 # set speed to zero
+            else:
+                self.overdrawn = False
+    
+    def count_pulses(self):
+        """
+            Count pulses of reed sensor on output shaft (1 pulse/rotation)
+            Algorithm based on debounce.c written by Kenneth A. Kuhn
+        """
+        DEBOUNCE_TIME = 0.003
+        SAMPLE_FREQUENCY = 1000
+        MAXIMUM = DEBOUNCE_TIME * SAMPLE_FREQUENCY
+        integrator = 0
+        output = 0
+        prior_output = 0
+        if self.ID_number == 0:
+            pin = DigitalInOut(board.D4)
+        else:
+            pin = DigitalInOut(board.D8)
+        pin.direction = Direction.INPUT
+        pin.pull = Pull.DOWN
+        
+        while True:
+            time.sleep(1/SAMPLE_FREQUENCY)
+            input = pin.value
+            if input == 0:
+                if integrator > 0:
+                    integrator = integrator - 1
+            elif integrator < MAXIMUM:
+                integrator = integrator + 1
+            if integrator == 0:
+                output = 0
+            elif integrator >= MAXIMUM:
+                output = 1
+                integrator = MAXIMUM
+            if output == 0 and prior_output == 1:
+                self.pulses = self.pulses + 1
+            prior_output = output
+
+
+class SubLight:
+    """" 
+    Provides a model of Blue Robotics sub light
+    """
+    __channel = 15
+    __brightness = 0
+
+    def __init__(self, channel=__channel, brightness=__brightness):
+        self.channel = channel
+        self.brightness = brightness
+
+    @property
+    def channel(self):
+        """ Gets sublight channel """
+        return self.__channel
+
+    @channel.setter
+    def channel(self, value:int) -> bool:
+        """ Sets Sublight channel """
+        if 0 <= value <= 15:
+            self.__channel = value
+            return True
+        else:
+            logging.error("Invalid PCA channel: %s. PCA9685 has 16 channels (0 -> 15).", str(value))
+            return False
+        
+    @property
+    def brightness(self):
+        """ Gets Sublight brightness """
+        return self.__brightness
+    
+    @brightness.setter
+    def brightness(self, value:float) -> bool:
+        """ Sets Sublight brightness """
+        if 0. <= value <= 1.:
+            self.__brightness = value
+            mapped_inp = 2*self.brightness - 1 # map to [-1,1]
+            WRITE_DUTY_CYCLE(self.channel, mapped_inp)
+            return True
+        else:
+            logging.error("Invalid Sublight brightness value: %s. Must be between 0 and 1", str(value))
+            return False
+        
+
+class Beacon:
+    """
+    Provides a model of the Succorfish Delphis beacon modem
+    """
+
+    __recieved_msg = ''
+    __transmit_msg = ''
+
+    def __init__(self):
+        t_listen = Thread(target=self.listen, daemon=True)
+        t_listen.start()
+        
+    @property
+    def recieved_msg(self):
+        """ Gets latest recieved message """
+        return self.__recieved_msg
+
+    @recieved_msg.setter
+    def recieved_msg(self, value:str) -> bool:
+        """ Sets latest recieved message """
+        self.__recieved_msg = value
+        return True
+    
+    @property
+    def transmit_msg(self):
+        """ Gets latest transmit message """
+        return self.__transmit_msg
+
+    @transmit_msg.setter
+    def transmit_msg(self, value:str) -> bool:
+        """ Sets latest transmit message """
         try:
-            beacon.Transmit_Message("SOS")
-            time.sleep(5)
-            beacon.Transmit_Message(SOS_msg)
+            HOST = '127.0.0.1'
+            PORT = 4000
+            s = socket.socket()
+            s.connect((HOST, PORT))
+            # fullmsg = 'MS-' + str(DEV_NO) + ' RE: ' + value
+            fullmsg = '106 RE: ' + value
+            s.send(fullmsg.encode())
+            s.close()
+            logging.info(fullmsg)
+            self.__transmit_msg = value
+            return True
         except Exception:
-            pass
-        time.sleep(5)
+            logging.info("ERROR transmitting message: " + value)
+            logging.info(traceback.format_exc())
+            return False
 
+    # -----------------------------
+    
+    def listen(self):
+        """ Thread to listen for incoming messages """
+        PORT = 3000
+        HOST = '127.0.0.1'
+        MAX_LENGTH = 4096
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serversocket.bind((HOST, PORT))
+        serversocket.listen(5)
+        while True:
+            (clientsocket, address) = serversocket.accept()
+            msg = clientsocket.recv(MAX_LENGTH)
+            if msg == '':  # client terminated connection
+                clientsocket.close()
+            self.recieved_msg = msg.decode()
+    
 
+class Sensors:    
+    """
+    Contains sensors and data collection
+    """
+    
+    __record = []
+    __all_sensors = {
+            "Battery" : "IV",
+            "Rotations" : "ROT",
+            "Ping" : "PING",
+            "Orientation" : "IMU",
+            "Pressure" : "PT"
+        }
+    __sample_rate = 10
+    __DATA_INIT_DELAY = 2
+    
+    def __init__(self, battery, motors, sample_rate=__sample_rate, record=list(__all_sensors.keys())):
+        # self.__battery = battery
+        # self.__motors = motors
+        
+        self.sample_rate = sample_rate
+        self.record = record
+        
+        for sensor in self.record:
+            """ Initialize sensor objects """
+            
+            if sensor == "Battery":
+                self.IV = []
+                self._battery = self.Battery(battery, motors)
+                sensor_obj = self._battery
+            elif sensor == "Rotations":
+                self.ROT = []
+                self._rotations = self.Rotations(motors)
+                sensor_obj = self._rotations
+            elif sensor == "Ping":
+                self.PING = []
+                self._ping = self.Ping()
+                sensor_obj = self._ping
+            elif sensor == "Orientation":
+                self.IMU = []
+                self._orientation = self.Orientation()
+                sensor_obj = self._orientation
+            elif sensor == "Pressure":
+                self.PT = []
+                self._pressure = self.Pressure()
+                sensor_obj = self._pressure
+                    
+            if not sensor_obj.init():
+                logging.warning(sensor + " sensing failed to initialize. Not recording data")
+            else:
+                Thread(daemon=True, target=self.record_data_cont, args=(sensor,)).start()
+            
+            
+    @property
+    def sample_rate(self):
+        """ Gets the data sampling rate in Hz """
+        return self.__sample_rate
 
-if __name__ == "__main__":
-    main()
+    @sample_rate.setter
+    def sample_rate(self, value:float) -> bool:
+        """Sets data sampling rate (Hz)"""
+        if value < 0:
+            logging.error("Negative sampling rate specified. ")
+            return False
+        elif value > 20:
+            logging.warning("Processor unable to consistently sample above 20 Hz. Sample rate set to 20 Hz.")
+            self.__sample_rate = 20
+            return True
+        else:
+            self.__sample_rate = value
+            return True
+    
+    @property
+    def record(self):
+        """ Gets list of sensors that will be recording data """
+        return self.__record
+    
+    @record.setter
+    def record(self, value:list) -> bool:
+        """Sets list of sensors that will be recording data """
+        record = []
+        for string in value:
+            if string in list(self.__all_sensors.keys()):
+                record.append(string)
+            else:
+                logging.error("Invalid sensor requested")
+                return False
+        self.__record = record
+        return True
+
+    def WriteToFile(self, data_list = None, data_bin = False):
+        # use outer function name as data_bin if not specified
+        if data_bin == False:
+            cframe = inspect.currentframe()
+            data_bin = inspect.getframeinfo(cframe.f_back).function
+        
+        # Filenaming convention: /home/pi/data/<data_bin>.dat
+        dt = datetime.now(timezone.utc).isoformat(timespec='milliseconds')
+        current_date = dt[0:10]
+        current_time = dt[0:23]
+        filename = "/home/pi/data/" + data_bin + ".dat"
+
+        # Write new line to file. Format: current_time    data_1    ...    data_n
+        if data_list != None:
+            with open(filename, "a+") as f:  
+                # write new data line
+                f.write(current_time + "\t")
+                str_data = [ f"{data_point:.3f}" if isinstance(data_point, float) else str(data_point) for data_point in data_list]
+                for data_point in str_data:
+                    f.write(data_point)
+                    f.write("\t")
+                f.write("\n")
+                
+    @timer
+    def record_data(self, data_type:str):
+        data_var = self.__all_sensors[data_type]
+        exec("self." + data_var + " = self._" + data_type.lower() + ".read()" )
+        data = eval("self._" + data_type.lower()+".read()")
+        self.WriteToFile( data, data_type )
+
+    def record_data_cont(self, data_type:str):
+        time.sleep(self.__DATA_INIT_DELAY)
+        while True:
+            exec_time = self.record_data(data_type)
+            sleep_time = max(0, 1/self.sample_rate - exec_time)
+            time.sleep(sleep_time)
+
+    class Battery:
+        def __init__(self, battery, motors):
+            self.battery = battery
+            self.motors = motors
+        
+        def init(self) -> bool:
+            if not self.read():
+                logging.info("Battery reading failed!")
+                return False
+            return True
+        
+        def read(self) -> list:
+            try:
+                IV = []
+                IV.append(self.battery.voltage)
+                for motor in self.motors:
+                    IV.append(motor.current_draw)
+            except Exception:
+                IV = []
+            return IV
+
+    class Pressure: 
+        def init(self) -> bool:
+            self.sensor = ms5837.MS5837_30BA(22)
+            if not self.sensor.init():  # initialize sensor
+                logging.info("Pressure sensor could not be initialized")
+                return False
+            if not self.sensor.read():  # Check we can read from sensor
+                logging.info("Pressure sensor read failed!")
+                return False
+            return True
+        
+        def read(self) -> list:       
+            self.sensor.read()
+            P = self.sensor.pressure(ms5837.UNITS_atm)
+            T = self.sensor.temperature(ms5837.UNITS_Centigrade)
+            PT = [P,T]
+            return PT
+        
+    class Rotations:
+        def __init__(self, motors):
+            self.motors = motors
+            
+        def init(self) -> bool:
+            if not self.read():
+                logging.info("Rotation tracking sensor read failed!")
+                return False
+            return True
+        
+        def read(self) -> list:  # to be ran as thread
+            try:
+                # for motor in self.motors:
+                #     print(motor.pulses)
+                ROT = [motor.pulses for motor in self.motors]
+                return ROT
+            except Exception:
+                return False
+    
+    class Ping():
+        def init(self) -> bool:
+            self.sensor = Ping1D()
+            self.sensor.connect_serial("/dev/ttyAMA0", 115200)
+            
+            if not self.sensor.initialize():
+                logging.warning("Ping sensor could not be initialized")
+                return False
+            if not self.read():
+                logging.warning("Ping sensor could not be read")
+                return False
+            return True
+
+        def read(self):
+            try:
+                ping_data = self.sensor.get_distance()
+                PING = [ping_data["distance"], ping_data["confidence"]]
+                return PING
+            except Exception:
+                return False
+    
+    class Orientation():
+        class ImuMag:
+
+            def __init__(self):
+                self.icm = ICM20602()
+                self.mmc = MMC5983(i2cbus=None)
+
+            def get_imu(self):
+                data = self.icm.read_all()
+                acc = [data.a.x, data.a.y, data.a.z]
+                # gyr = [data.g.x, data.g.y, data.g.z]
+                return acc
+
+            def get_mag(self):
+                # read the data
+                data = self.mmc.read_data()
+                mag = [data.x, data.y, data.z]
+                # mag_raw = [data.x_raw, data.y_raw, data.z_raw]
+                return mag
+
+            def cal_mag(self):
+                self.mmc.calibrate()
+                # cal = [self.mmc.caldata[0], self.mmc.caldata[1], self.mmc.caldata[2]]
+
+            def process_imu(self, accRaw):
+                """ Processes raw IMU data to derive pitch and roll.
+                Pitch is positive when the bow lifts up.
+                Roll is positive when the port side lifts up.
+                """
+                # desired XYZ directions (standard)
+                # X - point toward bow
+                # Y - point to port
+                # Z - point up
+
+                # uncomment the relevant lines depending on the IMU orientation
+                accRaw[0] = -accRaw[0]  # imu x axis points to the stern
+                accRaw[1] = -accRaw[1]  # imu y axis points to the starboard
+                accRaw[2] = -accRaw[2]  # imu z axis points down
+                try:
+                    # normalize the raw accelerometer data
+                    norm_factor = sqrt(accRaw[0] * accRaw[0] + accRaw[1] * accRaw[1] + accRaw[2] * accRaw[2])
+                    accXnorm = accRaw[0] / norm_factor
+                    accYnorm = accRaw[1] / norm_factor
+                    pitch = asin(accXnorm)
+                    roll = -asin(accYnorm/cos(pitch))
+                    # convert from radians to degrees
+                    pitch_deg = pitch * (180/pi)
+                    roll_deg = roll * (180/pi)
+                except Exception as e:
+                    pitch_deg = 0
+                    roll_deg = 0
+                return pitch_deg, roll_deg
+
+            def process_mag(self, magRaw, pitch_deg, roll_deg):
+                """ Processes raw magnetometer data to derive heading.
+                Compensates for pitch and roll.
+                Heading is measured clockwise in degrees from magnetic north.
+                Pitch and roll are expected to be in degrees.
+                *** This method is not outputting correct heading values. ***
+                """
+
+                # desired XYZ directions (standard)
+                # X - point toward bow
+                # Y - point to port
+                # Z - point up
+
+                # uncomment the relevant lines depending on the magnetometer orientation
+                # magRaw[0] = -magRaw[0]  # mag x axis points to the stern
+                magRaw[1] = -magRaw[1]  # mag y axis points to the starboard
+                # magRaw[2] = -magRaw[2]  # mag z axis points down
+
+                # convert from degrees to radians
+                pitch = pitch_deg * (pi/180)
+                roll = roll_deg * (pi/180)
+
+                # compensate for the pitch and roll
+                magXcomp = magRaw[0]*cos(pitch) + magRaw[2]*sin(pitch)
+                magYcomp = magRaw[0]*sin(roll)*sin(pitch) + magRaw[1]*cos(roll) - magRaw[2]*sin(roll)*cos(pitch)
+                # magXcomp = magRaw[0]*cos(pitch) - magRaw[2]*sin(pitch)
+                # magYcomp = magRaw[0]*sin(roll)*sin(pitch) + magRaw[1]*cos(roll) + magRaw[2]*sin(roll)*cos(pitch)
+
+                # compensated heading in radians
+                heading = atan2(magYcomp, magXcomp)
+
+                # convert from radians to degrees
+                heading_deg = heading * (180/pi)
+
+                # convert heading from math angles (degrees CCW from x) to azimuth (degrees CW from north)
+                # heading_deg = 90 - heading_deg
+
+                # keep heading in the range 0 - 360
+                if heading_deg < 0:
+                    heading_deg += 360
+
+                return heading_deg
+
+            def main(self):
+
+                self.cal_mag()
+                acc = self.get_imu()
+                mag = self.get_mag()
+
+                pitch, roll = self.process_imu(acc)
+                heading = self.process_mag(mag, pitch, roll)
+
+                return pitch, roll, heading
+            
+            
+        def init(self) -> bool:
+            try:
+                self.sensor = self.ImuMag()  # initialize IMU
+                self.read()
+                return True
+            except Exception:
+                logging.info("IMU sensor could not be initialized")
+                return False
+
+        def read(self):
+            IMU = self.sensor.main()
+            return IMU
+
