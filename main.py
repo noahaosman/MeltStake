@@ -10,7 +10,7 @@ import argparse
 from threading import Thread
 import traceback
 
-from meltstake import LeakDetection, Battery, LED, Drill, SubLight, Beacon, Sensors
+from meltstake import Beacon
 import Operations
 
 # parse arguements
@@ -85,8 +85,11 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
                 Operations.DATA(beacon, arguments)
 
             elif command == 'LIGHT':
-                flt_in = float(arguments[0])
-                Operations.light.brightness = flt_in/100
+                try:
+                    flt_in = float(arguments[0])
+                    Operations.light.brightness = flt_in/100
+                except:
+                    pass
 
             elif command in known_commands:  # any other commands will begin as a thread
                 t_new = Thread(daemon=True, target=eval("Operations."+command), args=(arguments, ))

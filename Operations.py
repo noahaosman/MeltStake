@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 
 
-from meltstake import LeakDetection, Battery, LED, Drill, SubLight, Beacon, Sensors
+from meltstake import LeakDetection, Battery, LED, Drill, SubLight, Sensors
 
 # assign log file
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
@@ -133,73 +133,6 @@ def RELEASE(arguments=None):
         arguments (_type_, optional): Not currently utilized.
     """
     global stopauto
-    
-    def read_n_to_last_line(filename, n = 1):
-        """Returns the nth before last line of a file (n=1 gives last line)"""
-        num_newlines = 0
-        with open(filename, 'rb') as f:
-            try:
-                f.seek(-2, os.SEEK_END)    
-                while num_newlines < n:
-                    f.seek(-2, os.SEEK_CUR)
-                    if f.read(1) == b'\n':
-                        num_newlines += 1
-            except OSError:
-                f.seek(0)
-            last_line = f.readline().decode()
-        return last_line
-
-    def get_saved_data(data_type, time_between=0):
-        """Get two prior data points from saved file.
-
-        Args:
-            data_type (str): Name of the data file you would like to query. Currently only has support for Pressure or Rotations
-            time_between (int, optional): Additional time between the two saved points (seconds). Defaults to 0.
-
-        Returns:
-            list: 
-            If data_type = Pressure:
-                1) bool: False if bad reading detected, else True
-                2) float: Depth (atm)
-                3) float: Velocity (atm/s)
-            Else if data_type = Rotations:
-                1) bool: True
-                2) int: difference in rotations for encoder 1 (motor 0)
-                3) int: difference in rotations for encoder 2 (motor 1)
-        """
-        reads = [[None,None,None],[None,None,None]]
-        for i in [0,1]:
-            data = read_n_to_last_line("/home/pi/data/"+data_type+".dat", n = i*2 + 2 + i*10*time_between)
-            data = data.split()
-            reads[i][0] = datetime.strptime(data[0], '%Y-%m-%dT%H:%M:%S.%f')
-            for j in range(1,len(data)):
-                reads[i][j] = float(data[j])
-
-        dt = datetime.now()
-        time_since_last_read = (dt - reads[1][0]).total_seconds()
-        time_between_reads = (reads[0][0] - reads[1][0]).total_seconds()
-
-        data_read = True
-        if data_type == "Pressure":
-            if time_since_last_read > 30 or time_between_reads > 10:
-                # bad reading
-                data_read = False
-                out1 = 0
-                out2 = 0
-                logging.info("Bad "+data_type+" reading")
-            else:
-                P0 = reads[1][1]
-                P1 = reads[0][1]
-                out1 = (P0+P1)/2 #depth
-                if time_between_reads > 0:
-                    out2 = (P1-P0)/time_between_reads #velocity
-                else:
-                    out2 = 0
-        if data_type == "Rotations":
-            out1 = reads[1][1] - reads[0][1]# difference in encoder 1
-            out2 = reads[1][2] - reads[0][2]# difference in encoder 2
-
-        return [data_read, out1, out2]
 
     stopauto = False
     underwater = True
@@ -225,7 +158,7 @@ def RELEASE(arguments=None):
     loops = 0
     in_attempts = -1
     wait_time = 1
-    drill_out = [-1000, -1000]
+    drill_out = [-1000, -1000] # some big number
     OFF()
     if underwater:
         Thread(daemon=True, target=DRILL, args=(drill_out,)).start()
@@ -237,7 +170,17 @@ def RELEASE(arguments=None):
             # every 20 seconds check if # of rotations are increasing:
             if loops*wait_time > 20: 
                 loops = 0
-                [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
+                # [Rread, rotdot0, rotdot1] = get_saved_data("Rotations", 2)
+                try:
+                    rot0 = data.ROT
+                    time.sleep(1)
+                    rot1 = data.ROT
+                    rotdot0 = rot1[0] - rot0[0]
+                    rotdot1 = rot1[1] - rot0[1]
+                    Rread = True
+                except Exception:
+                    Rread = False
+                    
                 if (rotdot0 == 0 or rotdot1 == 0) or not Rread: #if either stake is stuck
                     # attempt to drill in 5 turns (this sometimes helps loosen the ice)
                     # alternate between left, right, and both drilling in
@@ -286,16 +229,22 @@ def SETROT(set_turns):
         set_turns (str): String of integers providing new value for rotations. "motor0_value motor1_value ..."
     """
     
-    # clean up input:
-    set_turns = [int(str_in) for str_in in set_turns]  # convert string input to int
-    set_turns.extend([None] * (num_motors - len(set_turns)))  # pad end with None's if input was less than number of motors
-    set_turns = set_turns[0:num_motors]  # remove extra elements if larger than the number of motors
+    try:
+        # clean up input:
+        set_turns = [int(str_in) for str_in in set_turns]  # convert string input to int
+        set_turns.extend([None] * (num_motors - len(set_turns)))  # pad end with None's if input was less than number of motors
+        set_turns = set_turns[0:num_motors]  # remove extra elements if larger than the number of motors
 
-    for motor, set_turn in zip(motors, set_turns):
-        if set_turn != None:
-            motor.pulses = set_turn
+        for motor, set_turn in zip(motors, set_turns):
+            if set_turn != None:
+                motor.pulses = set_turn
+    except Exception as e:
+        logging.info("motor rotation tracking adjustment failed")
+        logging.info(traceback.format_exc())
+    
+    return
 
-def SETSPD(arguments=None):
+def SETSPD(new_spd):
     """Sets the default speed for drill operations.
 
     Args:
@@ -303,11 +252,17 @@ def SETSPD(arguments=None):
     """
     global max_speed
     
-    flt_spd = [float(str_spd) for str_spd in arguments]
-    flt_spd = flt_spd[0]
-    if flt_spd is not None and 0. <= flt_spd <= 1.:
-        max_speed = flt_spd
-
+    try:
+        flt_spd = [float(str_spd) for str_spd in new_spd]
+        flt_spd = flt_spd[0]
+        if flt_spd is not None and 0. <= flt_spd <= 1.:
+            max_speed = flt_spd
+    except Exception as e:
+        logging.info("motor speed adjustment failed")
+        logging.info(traceback.format_exc())
+    
+    return
+        
 def DATA(beacon, arguments=None):
     """ Send most recent data measurement via beacon tx
 
@@ -346,10 +301,13 @@ def CLA(new_current_limit):
     Args:
         set_turns (str): String of a float providing new value for current limit (Amps).
     """
-    
-    new_current_limit = float(new_current_limit[0])
-    
-    for motor in motors:
-        motor.current_limit = new_current_limit
+    try:
+        new_current_limit = float(new_current_limit[0])
+        
+        for motor in motors:
+            motor.current_limit = new_current_limit
+    except Exception as e:
+        logging.info("Current limit adjust failed")
+        logging.info(traceback.format_exc())
 
     return
