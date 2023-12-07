@@ -86,7 +86,7 @@ network={
 EOM
 echo "$WPA_LINE" > "$WPA_FILE"
 
-# Install required Python packages
+# Install required Python packages. This can (should?) be replaced by a requirments.txt
 apt-get update
 apt-get install -y python3-pip
 apt-get install -y i2c-tools
@@ -128,7 +128,7 @@ hwclock -w  # sets hwclock to the current system time
 
 # initialize data directory
 mkdir /home/pi/data
-dat_files='meltstake.log CurrentDraw.dat Orientation.dat Rotations.dat Pressure.dat Ping.dat'
+dat_files='meltstake.log Battery.dat Orientation.dat Rotations.dat Pressure.dat Ping.dat'
 for filename in $dat_files
 do
 touch filename
