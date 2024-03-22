@@ -1,6 +1,8 @@
 
 Code for melt stake control, interfacing, and data collection.
 
+Confirmed to work on Raspbian GNU/Linux 11 (bullseye) 32-bit Lite
+
 # Installation
 The simplest installation method is via git:
 - `sudo apt update`
@@ -31,8 +33,6 @@ Each of the motors are equipped with an ACS712 current sensor. If at any point t
 There are two modes of operation of the melt stake, specified by the tag `-m`:
 - `deploy` : Field deployment
 - `debug` : motor speed is reduced to 20%, the beacon input is replaced with command line input, and the release protocol is not called on exiting the code.
-
-The melt stake device ID is specified by the tag `-d`. Currently only supports `02` and `03`.
 
 # Interfacing
 Commands to the melt stake are sent through acoustic beacons. To transmit a command run 
