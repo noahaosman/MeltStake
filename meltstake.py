@@ -1,12 +1,15 @@
 # pyright: reportMissingImports=false
 import logging
+import logging.handlers
 import re
+import json
 import time
 import numpy as np
 from math import sin, cos, asin, atan2, sqrt, pi
 from threading import Thread
 import traceback
 import socket
+import serial
 from datetime import datetime, timezone
 import inspect
 import board
@@ -20,7 +23,6 @@ from adafruit_ads1x15.analog_in import AnalogIn
 from icm20602 import ICM20602
 from mmc5983 import MMC5983
 
-from Clock_Speed import CLK_SPD
 
 # assign log file
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
@@ -53,13 +55,15 @@ try:
     PWM_OE.direction = Direction.OUTPUT
     PWM_OE.value = False  # armed
     # set clock speed (Default 25000000)
-    if DEV_NO in CLK_SPD:
-        CLK_SPD = CLK_SPD[DEV_NO]
+    with open("Clock_Speed.json", "r") as read_file:
+        CLK_SPD_dict = json.load(read_file)
+    if DEV_NO in CLK_SPD_dict:
+        CLK_SPD = CLK_SPD_dict[DEV_NO]
     else:
-        CLK_SPD = CLK_SPD['00']
+        CLK_SPD = CLK_SPD_dict['00']
     PCA.reference_clock_speed = CLK_SPD
     # Set the PWM duty cycle.
-    PCA.frequency = 200
+    PCA.frequency = 375
     # Create funtion for interfacing with Blue Robotics components
     def WRITE_DUTY_CYCLE(channel:int, value:float) -> bool:
         """ Write speed value to the PCA channel associated with this motor ID """
@@ -78,32 +82,44 @@ except Exception as error:
     LOG_STRING = "failed to initialize PCA9685 driver:, " + error
     logging.error(LOG_STRING)
     
+  
+class ADS1115:       
+    """
+    Create an ADS1115 class instance.
+    """
+    __i2c_bus = 1
+    __frequency = 100
     
-"""
-Create an ADS1115 class instance.
-"""
-CURR_DRAW_DIV_RATIO = 1  # no volt divider
-BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
-# Initialize i2c bus.
-try:
-    I2C_BUS_ADS = I2C(22)
-except Exception as error:
-    LOG_STRING = "failed to initialize i2c communication on bus 22:, " + error
-    logging.error(LOG_STRING)
-try:
-    ads = ADS.ADS1115(I2C_BUS_ADS, address=0x48)
-    
-    ADS_VOLTAGE = [0,0,0,0]
-    def monitor_ADS():
+    def __init__(self, i2c_bus=__i2c_bus, frequency=__frequency):
+        self.i2c_bus = i2c_bus
+        self.frequency = frequency
+        # initialize i2c bus:
+        try:
+            self.I2C_BUS = I2C(self.i2c_bus)
+        except Exception as error:
+            LOG_STRING = "failed to initialize i2c communication on bus "+str(self.i2c_bus)+":, " + error
+            logging.error(LOG_STRING)
+        self.VOLTAGE = [0,0,0,0]
+        Thread(daemon=True, target=self.monitor_ADS).start()
+
+    def monitor_ADS(self):
+        ads = ADS.ADS1115(self.I2C_BUS, address=0x48)
         while True:
             for i in range(4):
                 reading = AnalogIn(ads, eval("ADS.P"+str(i)))
-                ADS_VOLTAGE[i] = reading.voltage
-            time.sleep(0.1)
-    t_monitor_ADS = Thread(target=monitor_ADS, daemon=True)
-    t_monitor_ADS.start()
+                self.VOLTAGE[i] = reading.voltage
+            time.sleep(1/self.frequency)
+
+# Initialize ADS1115s
+try:
+    battery_ads = ADS1115(22, 10)
 except Exception as error:
-    LOG_STRING = "failed to initialize ADS1115 driver:, " + error
+    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 22:, " + error
+    logging.error(LOG_STRING)
+try:
+    navigator_ads = ADS1115(1, 100)
+except Exception as error:
+    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 1:, " + error
     logging.error(LOG_STRING)
 
 def bound(value, lwr=0, upr=1):
@@ -228,8 +244,9 @@ class Battery:
     
     def monitor_voltage(self):
         """ Thread to monitor voltage and update battery charge state """
+        BATT_VOLT_DIV_RATIO = (3.3 + 10) / 3.3  # R1 = 10kOhm; R2 = 3.3kOhm
         while True:
-            self.voltage = ADS_VOLTAGE[3] * BATT_VOLT_DIV_RATIO
+            self.voltage = battery_ads.VOLTAGE[3] * BATT_VOLT_DIV_RATIO
             if self.voltage <= self.voltage_limit:
                 self.under_voltage = True
             else:
@@ -400,8 +417,8 @@ class Drill:
         Note: This algorithm has been tuned s.t. 100 steps are needed to go 
           from -1 --> +1. Change time step (dt) to modify smoothing sharpness.
         """
-        Fmax = 0.002
-        Vmax = 0.027
+        Fmax = 0.1#0.002
+        Vmax = 0.1#0.027
         r = 0.25
         dt = 0.005
         
@@ -421,17 +438,19 @@ class Drill:
                 WRITE_DUTY_CYCLE(self.ID_number, self.current_speed)
                 time.sleep(dt)
             else:
-                time.sleep(0.25)
+                time.sleep(0.05)
     
     def monitor_current(self):
         """ Monitor current draw of motor, set speed to zero if it exceeds limit """
+        CURR_DRAW_DIV_RATIO = 1  # no volt divider
         while True:
-            self.current_draw = 10 * (2.5 - ADS_VOLTAGE[self.ID_number] * CURR_DRAW_DIV_RATIO)
+            self.current_draw = 10 * (2.5 - battery_ads.VOLTAGE[self.ID_number] * CURR_DRAW_DIV_RATIO)
             if self.current_draw > self.current_limit:
                 self.overdrawn = True
                 self.speed = 0.0 # set speed to zero
             else:
                 self.overdrawn = False
+            time.sleep(0.1)
     
     def count_pulses(self):
         """
@@ -512,7 +531,124 @@ class SubLight:
             logging.error("Invalid Sublight brightness value: %s. Must be between 0 and 1", str(value))
             return False
         
+class Sonar881a:
+    """
+    This class provides serial interfacing with a LattePanda which controls the 
+    Model 881A Digital Multi-Frequency Imaging Sonar
+    """
+    # TODO:
+    # testing testing testing ....... I dont know if any of the below actually works!
+    
+    #   Add function that transmits low power warning to LattePanda, telling it to shut off the sonar
+    #    (this functionality may just be added to main)
 
+    
+    __recieved_msg = ''
+    __transmit_msg = ''
+    
+    def __init__(self):
+        self.port = serial.Serial("/dev/ttyAMA0", baudrate=115200, timeout=3.0)
+        t_listen = Thread(target=self.listen, daemon=True)
+        t_listen.start()
+    
+    @property
+    def recieved_msg(self):
+        """ Gets latest recieved message """
+        return self.__recieved_msg
+
+    @recieved_msg.setter
+    def recieved_msg(self, value:str) -> bool:
+        """ Sets latest recieved message """
+        self.__recieved_msg = value
+        return True
+    
+    @property
+    def transmit_msg(self):
+        """ Gets latest transmit message """
+        return self.__transmit_msg
+
+    @transmit_msg.setter
+    def transmit_msg(self, value:str) -> bool:
+        """ Sets latest transmit message """
+        try:
+            if not '\n' in value:
+                value = value + '\n' # append new line char to msg
+            self.port.write(value)
+            self.__transmit_msg = value
+            return True
+        except Exception:
+            logging.info("ERROR transmitting message to LattePanda: " + value)
+            logging.info(traceback.format_exc())
+            return False
+    
+    def listen(self):
+        """ 
+        Thread to listen for incoming messages.
+        Updates recieved_msg on reading new line
+        """
+        while True:
+            inp = self.port.readline()
+            self.recieved_msg = inp.strip().decode("utf-8")
+            
+class LimitSwitch:
+    """
+    Provides actuated distance control for our in-house temperature sensor rake.
+    """
+    
+    """
+    A1302 Hall effect sensor constants
+    """
+    def __init__(self):
+        # Tare background field to zero
+        self.flag = False
+        self.BASE_OUT = 0
+        time_avg = 1
+        freq = 100
+        self.VOLT_DIV_RATIO = (470 + 470) / 470  # R1 = 470kOhm; R2 = 470kOhm
+        time.sleep(1)
+        for i in range(int(time_avg*freq)):
+            self.BASE_OUT = self.BASE_OUT + navigator_ads.VOLTAGE[0]*self.VOLT_DIV_RATIO
+            time.sleep(1/freq)
+        self.BASE_OUT = self.BASE_OUT/int(time_avg*freq)
+        
+        Thread(target=self.monitor_limit_switch, daemon=True).start()
+
+
+        # """BELOW IS FOR TESTING ONLY, REMOVE ONCE AUTOMATED SCREW STOP IS IMPLEMENTED"""
+        # """
+        # Initialize data logging
+        # """
+        # LOG_FILENAME = "/home/pi/data/HallEffect.dat"
+        # self.LOG_FREQUENCY = 100
+
+        # self.my_logger = logging.getLogger('MyLogger')
+        # self.my_logger.setLevel(logging.INFO)
+
+        # handler = logging.handlers.RotatingFileHandler(
+        #             LOG_FILENAME, maxBytes=1000000000, backupCount=0)
+        # formatter = logging.Formatter("%(asctime)-15s %(message)s")
+        # handler.setFormatter(formatter)
+        # self.my_logger.addHandler(handler)
+        # Thread(target=self.log_data, daemon=True).start()
+    
+    # def log_data(self):
+    #     while True:
+    #         self.my_logger.info('%.2f V' % (self.VOLT_DIV_RATIO*navigator_ads.VOLTAGE[0]))
+    #         time.sleep(1/self.LOG_FREQUENCY)
+
+    def monitor_limit_switch(self):
+        threshold = 0.05
+        while True:
+            perc = abs((2*navigator_ads.VOLTAGE[0] - self.BASE_OUT)/(2.5))
+            
+            if perc > threshold:
+                self.flag = True
+            else:
+                self.flag = False
+            
+            time.sleep(0.05)
+
+    
 class Beacon:
     """
     Provides a model of the Succorfish Delphis beacon modem
@@ -588,7 +724,7 @@ class Sensors:
     __all_sensors = {
             "Battery" : "IV",
             "Rotations" : "ROT",
-            "Ping" : "PING",
+            # "Ping" : "PING",
             "Orientation" : "IMU",
             "Pressure" : "PT"
         }

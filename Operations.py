@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 
 
-from meltstake import LeakDetection, Battery, LED, Drill, SubLight, Sensors
+from meltstake import LeakDetection, Battery, LED, Drill, SubLight, Sensors, LimitSwitch
 
 # assign log file
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log",
 
 motors = [Drill(0), Drill(1)]
 battery = Battery()
+limitswitch = LimitSwitch()
 data = Sensors(battery, motors)
 light = SubLight()
 leaksenor = LeakDetection()
@@ -53,6 +54,10 @@ def DRILL(target_turns):
     target_reached = [False]*num_motors
 
     disarm = False
+    # Loop to drive motors. Exit conditions:
+    #   - target number of rotations reached
+    #   - power drawn beyond current limit
+    #   - limit switch is triggered
     while any([not done for done in target_reached]) and not disarm:
 
         # update starting number of turns
@@ -61,7 +66,7 @@ def DRILL(target_turns):
         # adjust speed for each motor:
         for motor_no, (motor, dir, done, targ, curr) in enumerate(zip(motors, directions, target_reached, target_turns, turns)):
             if not done:
-                if dir * (targ - curr) <= 0 or motor.overdrawn:  # if target is reached, or if overcurrent 
+                if dir * (targ - curr) <= 0 or motor.overdrawn or (motor.speed > 0 and limitswitch.flag):
                     target_reached[motor_no] = True
                     motor.speed = 0
                 else:
