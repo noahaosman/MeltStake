@@ -40,7 +40,10 @@ def DRILL(target_turns):
         target_turns (int): Target number of revolutions. Negative for CCW, Positive for CW.
     """
     global disarm
-        
+       
+    #kill any prior release timers & start a new one 
+    motors[0].auto_release_OVRD = True
+    time.sleep(0.05)
     Thread(daemon=True, target=motors[0].auto_release_timer, args=(data.PT[0], auto_release_flag,))
     
     # clean up input: 

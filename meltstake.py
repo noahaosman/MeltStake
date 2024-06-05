@@ -497,13 +497,15 @@ class Drill:
         t0 = time.time()
         self.auto_release_OVRD = False
         release_flag[0] = False
-        while depth > 1.05:
-            t = time.time() - t0
-            if t > 5*60:
-                release_flag[0] = True
-                break
-            if self.auto_release_OVRD == True:
-                break
+        if depth > 1.05:
+            while True:
+                t = time.time() - t0
+                if t > 5*60:
+                    release_flag[0] = True
+                    break
+                if self.auto_release_OVRD == True:
+                    break
+                time.sleep(0.01)
             
         return
 
