@@ -45,7 +45,7 @@ Create a simple PCA9685 class instance.
 try:
     I2C_BUS_PCA = I2C(4)
 except Exception as error:
-    LOG_STRING = "failed to initialize i2c communication on bus 4:, " + error
+    LOG_STRING = "failed to initialize i2c communication on bus 4:, " + str(error)
     logging.error(LOG_STRING)
 try:
     # create PCA class
@@ -79,7 +79,7 @@ try:
             logging.error("Invalid PCA channel: %s. PCA9685 has 16 channels (0 -> 15).", str(value))
             return False
 except Exception as error:
-    LOG_STRING = "failed to initialize PCA9685 driver:, " + error
+    LOG_STRING = "failed to initialize PCA9685 driver:, " + str(error)
     logging.error(LOG_STRING)
     
   
@@ -97,7 +97,7 @@ class ADS1115:
         try:
             self.I2C_BUS = I2C(self.i2c_bus)
         except Exception as error:
-            LOG_STRING = "failed to initialize i2c communication on bus "+str(self.i2c_bus)+":, " + error
+            LOG_STRING = "failed to initialize i2c communication on bus "+str(self.i2c_bus)+":, " + str(error)
             logging.error(LOG_STRING)
         self.VOLTAGE = [0,0,0,0]
         Thread(daemon=True, target=self.monitor_ADS).start()
@@ -114,12 +114,12 @@ class ADS1115:
 try:
     battery_ads = ADS1115(22, 10)
 except Exception as error:
-    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 22:, " + error
+    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 22:, " + str(error)
     logging.error(LOG_STRING)
 try:
     navigator_ads = ADS1115(1, 100)
 except Exception as error:
-    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 1:, " + error
+    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 1:, " + str(error)
     logging.error(LOG_STRING)
 
 def bound(value, lwr=0, upr=1):
