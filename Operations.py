@@ -8,21 +8,22 @@ import traceback
 from datetime import datetime
 
 
-from meltstake import LeakDetection, Battery, LED, Drill, SubLight, Sensors, LimitSwitch
+# from meltstake import ms.LeakDetection, ms.Battery, ms.LED, ms.Drill, ms.SubLight, ms.Sensors, ms.LimitSwitch, ms.SonarCommChannel
+import meltstake as ms
 
 # assign log file
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log", filemode="a+",
                     format="%(asctime)-15s %(levelname)-8s %(message)s")
 
-motors = [Drill(0), Drill(1)]
-battery = Battery()
-limitswitch = LimitSwitch()
-data = Sensors(battery, motors)
-light = SubLight()
-leaksenor = LeakDetection()
-heartbeat = LED(25)
+motors = [ms.Drill(0), ms.Drill(1)]
+battery = ms.Battery()
+limitswitch = ms.LimitSwitch()
+data = ms.Sensors(battery, motors)
+light = ms.SubLight()
+leaksenor = ms.LeakDetection()
+heartbeat = ms.LED(25)
 heartbeat.blink()
-SOS = LED(11)
+SOS = ms.LED(11)
 SOS.off() 
 
 disarm = False
@@ -30,6 +31,7 @@ SOS_flag = False
 stopauto = True
 num_motors = len(motors)
 max_speed = 0.6
+auto_release_flag = [False]
 
 def DRILL(target_turns):  
     """ Power each motor for the specified # of turns.
@@ -39,6 +41,8 @@ def DRILL(target_turns):
     """
     global disarm
         
+    Thread(daemon=True, target=motors[0].auto_release_timer, args=(data.PT[0], auto_release_flag,))
+    
     # clean up input: 
     target_turns = [int(str_in) for str_in in target_turns]  # convert string input to int
     target_turns.extend([0] * (num_motors - len(target_turns)))  # pad end with 0's if input was less than number of motors
@@ -98,6 +102,7 @@ def AUTO(deployment_intv_time):
     time_between_drills = float(deployment_intv_time[1])
     deployment_time = float(deployment_intv_time[2])
 
+    AR_OVRD('1')
     OFF()
 
     # tare rotation tracker
@@ -227,6 +232,78 @@ def OFF(arguments=None):
         motor.speed=0 
     return
 
+def AR_OVRD(state):
+    
+    try:
+        if state[0] == 'T' or state == '1':
+            motors[0].auto_release_OVRD = True
+        elif state[0] == 'F' or state == '0':
+            motors[0].auto_release_OVRD = False
+    except Exception:
+        pass
+
+def LS_OVRD(state): 
+    """Override limit switch auto stop for drilling. 
+    
+    Args:
+        state : T, True, TRUE, 1    --> disable limit switching
+              : F, False, FALSE, 0  --> enable limit switching
+    """
+    try:
+        if state[0] == 'T' or state == '1':
+            limitswitch.override = True
+        elif state[0] == 'F' or state == '0':
+            limitswitch.override = False
+    except Exception:
+        pass
+
+def SONAR(beacon, msg):
+    """Communication with 881a Sonar
+
+    Args:
+        beacon (Beacon): object created by "Beacon" class
+        msg (str): message. Options:
+            - Deploy :: Begin sonar data collection
+                - parameter :: Sonar configuration code
+            - Undeploy :: Stop sonar data collection
+            - Shutdown :: Shutdown LattePanda
+            
+    """
+    
+    
+    command = ''
+    parameter = None
+    if len(msg) > 1:
+        command = msg[1]
+    if len(msg) > 2:
+        parameter = msg[2]
+
+    with ms.SonarCommChannel() as comm:
+        if command == 'Deploy':
+            if not parameter:
+                parameter = "0"
+            command = {"Command": "Deploy", "Deploy": parameter}
+            comm.sendCommand(command)
+            response = comm.receiveResponse()
+
+        elif command == 'Undeploy':
+            command = {"Command": "Undeploy"}
+            comm.sendCommand(command)
+            response = comm.receiveResponse()
+
+        elif command == 'Shutdown':
+            command = {"Command": "Shutdown"}
+            comm.sendCommand(command)
+            response = comm.receiveResponse()
+        
+        else:
+            response = "Uknown request"
+        
+        
+        if response:
+            logging.info(response)
+            beacon.transmit_msg = response
+    
 def SETROT(set_turns):  
     """ Manually overwrite rotation tracking number
 
@@ -272,7 +349,7 @@ def DATA(beacon, arguments=None):
     """ Send most recent data measurement via beacon tx
 
     Args:
-        data (Sensors): object created by "Sensors" class
+        data (ms.Sensors): object created by "ms.Sensors" class
         beacon (Beacon): object created by "Beacon" class
         arguments (string): Data type requested. Options:
             IV     ::  current, voltage

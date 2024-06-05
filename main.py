@@ -54,7 +54,6 @@ time.sleep(startup_time)
 
 # MAIN LOOP:
 while not Operations.battery.under_voltage and not Operations.leaksenor.state:
-
     try:
         time.sleep(0.05)
 
@@ -62,7 +61,10 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
         if args.mode == 'debug':
             beacon.recieved_msg = input("input: ")  # Terminal input for testing.
 
-        if beacon.recieved_msg != '':
+        if beacon.recieved_msg != '' or Operations.auto_release_flag[0]:
+            
+            if Operations.auto_release_flag[0]:
+                msg = 'RELEASE'
 
             msg = beacon.recieved_msg.upper()
             beacon.transmit_msg = msg  # echo back the message
@@ -70,6 +72,7 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
             msg_split = msg.split()
             command = msg_split[0]
             arguments = [msg_split[i] for i in range(1,len(msg_split))]
+            
 
             if command == 'OFF':
                 Operations.OFF()
@@ -77,6 +80,9 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
             
             elif command == 'STOPAUTO':
                 Operations.stopauto = True
+            
+            elif command == 'RELEASE':
+                Operations.OFF() # clear Queue, carry on to call release in a thread
 
             elif command == 'CLA':
                 Operations.CLA(arguments)
@@ -90,6 +96,9 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
                     Operations.light.brightness = flt_in/100
                 except:
                     pass
+            
+            elif command == 'SONAR':
+                t_sonar = Thread(daemon=True, target=Operations.SONAR, args=(beacon, arguments,))
 
             elif command in known_commands:  # any other commands will begin as a thread
                 t_new = Thread(daemon=True, target=eval("Operations."+command), args=(arguments, ))

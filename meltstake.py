@@ -55,7 +55,7 @@ try:
     PWM_OE.direction = Direction.OUTPUT
     PWM_OE.value = False  # armed
     # set clock speed (Default 25000000)
-    with open("Clock_Speed.json", "r") as read_file:
+    with open("/home/pi/MeltStake/Clock_Speed.json", "r") as read_file:
         CLK_SPD_dict = json.load(read_file)
     if DEV_NO in CLK_SPD_dict:
         CLK_SPD = CLK_SPD_dict[DEV_NO]
@@ -110,7 +110,7 @@ class ADS1115:
                 self.VOLTAGE[i] = reading.voltage
             time.sleep(1/self.frequency)
 
-# Initialize ADS1115s
+# Initialize both ADS1115.
 try:
     battery_ads = ADS1115(22, 10)
 except Exception as error:
@@ -298,6 +298,7 @@ class Drill:
         # initialize drill object
         self.ID_number = ID_number
         self.current_limit = current_limit
+        self.auto_release_OVRD = False
         
         # start threads --------------------
         t_speed_manager = Thread(target=self.update_speed, daemon=True)
@@ -487,6 +488,25 @@ class Drill:
                 self.pulses = self.pulses + 1
             prior_output = output
 
+    def auto_release_timer(self, depth, release_flag):
+        """
+        Start a timer. At 5 minuntes trigger auto-release.
+        This is a preventative measure for the failure mode of ROV comm loss while drilled into ice.
+        note: only triggers when measuring below-surface depths
+        """
+        t0 = time.time()
+        self.auto_release_OVRD = False
+        release_flag[0] = False
+        while depth > 1.05:
+            t = time.time() - t0
+            if t > 5*60:
+                release_flag[0] = True
+                break
+            if self.auto_release_OVRD == True:
+                break
+            
+        return
+
 
 class SubLight:
     """" 
@@ -530,66 +550,53 @@ class SubLight:
         else:
             logging.error("Invalid Sublight brightness value: %s. Must be between 0 and 1", str(value))
             return False
-        
-class Sonar881a:
+  
+  
+class SonarCommChannel:
+  """ Implement the transport send and receive to the Sonar881 controller.
+  """
+
+  def __init__(self):
+    pass
+
+  def __enter__(self):
+    self.ser = serial.Serial('/dev/serial0', baudrate=115200, bytesize=8, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
+    # We wake up once in a while so the program can be interrupted.
+    self.ser.timeout = 0.5
+    return self
+  
+  def __exit__(self, *args):
+    self.ser.close()
+
+  def receiveStatus(self) -> str:
+    """ Wait forever for a switch command, and return it as a byte array.
     """
-    This class provides serial interfacing with a LattePanda which controls the 
-    Model 881A Digital Multi-Frequency Imaging Sonar
+    got_line = False
+    read_data = bytearray(0)
+    while not got_line:
+      partial_data = self.ser.read_until(b'\n')
+      read_data.extend(partial_data)
+      if len(read_data) > 0 and read_data[-1] == 0x0a:
+        got_line = True
+
+    return read_data.decode('utf-8').rstrip()
+
+  def receiveResponse(self) -> str:
+    read_data = self.ser.read_until(b'\n')
+    return read_data
+
+  def sendCommand(self, command:object):
+    """ Serializes and sends a command object to the Sonar881 controller.
+        Typically, this will be a dictionary, but limited arrays are also allowed.
     """
-    # TODO:
-    # testing testing testing ....... I dont know if any of the below actually works!
-    
-    #   Add function that transmits low power warning to LattePanda, telling it to shut off the sonar
-    #    (this functionality may just be added to main)
+    commandString = json.dumps(command) + '\n'
+    print('Sending command: ' + commandString)
+    sent_count = self.ser.write(bytes(commandString, "utf-8"))
+    self.ser.flush()
+    if sent_count != len(commandString):
+      print('Sent ' + str(sent_count) + ' bytes, but should have sent ' + len(commandString))
 
-    
-    __recieved_msg = ''
-    __transmit_msg = ''
-    
-    def __init__(self):
-        self.port = serial.Serial("/dev/ttyAMA0", baudrate=115200, timeout=3.0)
-        t_listen = Thread(target=self.listen, daemon=True)
-        t_listen.start()
-    
-    @property
-    def recieved_msg(self):
-        """ Gets latest recieved message """
-        return self.__recieved_msg
-
-    @recieved_msg.setter
-    def recieved_msg(self, value:str) -> bool:
-        """ Sets latest recieved message """
-        self.__recieved_msg = value
-        return True
-    
-    @property
-    def transmit_msg(self):
-        """ Gets latest transmit message """
-        return self.__transmit_msg
-
-    @transmit_msg.setter
-    def transmit_msg(self, value:str) -> bool:
-        """ Sets latest transmit message """
-        try:
-            if not '\n' in value:
-                value = value + '\n' # append new line char to msg
-            self.port.write(value)
-            self.__transmit_msg = value
-            return True
-        except Exception:
-            logging.info("ERROR transmitting message to LattePanda: " + value)
-            logging.info(traceback.format_exc())
-            return False
-    
-    def listen(self):
-        """ 
-        Thread to listen for incoming messages.
-        Updates recieved_msg on reading new line
-        """
-        while True:
-            inp = self.port.readline()
-            self.recieved_msg = inp.strip().decode("utf-8")
-            
+  
 class LimitSwitch:
     """
     Provides actuated distance control for our in-house temperature sensor rake.
@@ -601,6 +608,7 @@ class LimitSwitch:
     def __init__(self):
         # Tare background field to zero
         self.flag = False
+        self.override = False
         self.BASE_OUT = 0
         time_avg = 1
         freq = 100
@@ -614,7 +622,7 @@ class LimitSwitch:
         Thread(target=self.monitor_limit_switch, daemon=True).start()
 
 
-        # """BELOW IS FOR TESTING ONLY, REMOVE ONCE AUTOMATED SCREW STOP IS IMPLEMENTED"""
+        # """DATA LOGGING FOR TESTING ONLY"""
         # """
         # Initialize data logging
         # """
@@ -639,10 +647,13 @@ class LimitSwitch:
     def monitor_limit_switch(self):
         threshold = 0.05
         while True:
-            perc = abs((2*navigator_ads.VOLTAGE[0] - self.BASE_OUT)/(2.5))
-            
-            if perc > threshold:
-                self.flag = True
+            if not self.override:
+                perc = abs((2*navigator_ads.VOLTAGE[0] - self.BASE_OUT)/(2.5))
+                
+                if perc > threshold:
+                    self.flag = True
+                else:
+                    self.flag = False
             else:
                 self.flag = False
             
@@ -719,6 +730,19 @@ class Sensors:
     """
     Contains sensors and data collection
     """
+    
+    #TODO: incorporate this type of data management. Max file size + overwriting of old data.
+
+    # LOG_FILENAME = "/home/pi/data/HallEffect.dat"
+    # logger = logging.getLogger('MyLogger')
+    # logger.setLevel(logging.INFO)
+    # handler = logging.handlers.RotatingFileHandler(
+    #             LOG_FILENAME, maxBytes=3000000000, backupCount=0)
+    # formatter = logging.Formatter("%(asctime)-15s %(message)s")
+    # handler.setFormatter(formatter)
+    # logger.addHandler(handler)
+    # """Example usage:"""
+    # logger.info('%.2f V' % (self.VOLT_DIV_RATIO*navigator_ads.VOLTAGE[0]))
     
     __record = []
     __all_sensors = {
@@ -1041,4 +1065,3 @@ class Sensors:
         def read(self):
             IMU = self.sensor.main()
             return IMU
-
