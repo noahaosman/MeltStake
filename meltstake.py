@@ -299,6 +299,7 @@ class Drill:
         self.ID_number = ID_number
         self.current_limit = current_limit
         self.auto_release_OVRD = False
+        self.auto_release_kill = False
         
         # start threads --------------------
         t_speed_manager = Thread(target=self.update_speed, daemon=True)
@@ -495,15 +496,19 @@ class Drill:
         note: only triggers when measuring below-surface depths
         """
         t0 = time.time()
-        self.auto_release_OVRD = False
+        self.auto_release_kill = False
         release_flag[0] = False
         if depth > 1.05:
+            logging.info("auto release timer started")
             while True:
                 t = time.time() - t0
                 if t > 5*60:
                     release_flag[0] = True
+                    logging.info("auto release flag thrown")
                     break
                 if self.auto_release_OVRD == True:
+                    break
+                if self.auto_release_kill == True:
                     break
                 time.sleep(0.01)
             
@@ -904,7 +909,7 @@ class Sensors:
             self.sensor.read()
             P = self.sensor.pressure(ms5837.UNITS_atm)
             T = self.sensor.temperature(ms5837.UNITS_Centigrade)
-            PT = [P,T]
+            PT = [2,T]
             return PT
         
     class Rotations:

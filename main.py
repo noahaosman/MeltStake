@@ -65,8 +65,11 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
             
             if Operations.auto_release_flag[0]:
                 msg = 'RELEASE'
+                Operations.auto_release_flag[0] = False
+                logging.info("auto release flag caught")
+            else:
+                msg = beacon.recieved_msg.upper()
 
-            msg = beacon.recieved_msg.upper()
             beacon.transmit_msg = msg  # echo back the message
             
             msg_split = msg.split()
@@ -80,9 +83,6 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
             
             elif command == 'STOPAUTO':
                 Operations.stopauto = True
-            
-            elif command == 'RELEASE':
-                Operations.OFF() # clear Queue, carry on to call release in a thread
 
             elif command == 'CLA':
                 Operations.CLA(arguments)

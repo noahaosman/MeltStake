@@ -32,6 +32,7 @@ stopauto = True
 num_motors = len(motors)
 max_speed = 0.6
 auto_release_flag = [False]
+auto_release_thread = Thread()
 
 def DRILL(target_turns):  
     """ Power each motor for the specified # of turns.
@@ -40,11 +41,16 @@ def DRILL(target_turns):
         target_turns (int): Target number of revolutions. Negative for CCW, Positive for CW.
     """
     global disarm
+    global auto_release_flag
+    global auto_release_thread
        
-    #kill any prior release timers & start a new one 
-    motors[0].auto_release_OVRD = True
+    #start new auto release timer thread
+    motors[0].auto_release_kill = True
     time.sleep(0.05)
-    Thread(daemon=True, target=motors[0].auto_release_timer, args=(data.PT[0], auto_release_flag,))
+    auto_release_thread_new = Thread(daemon=True, target=motors[0].auto_release_timer, args=(data.PT[0], auto_release_flag,))
+    if not auto_release_thread.is_alive():  # make sure any prior counters are dead before starting thread
+        auto_release_thread = auto_release_thread_new
+        auto_release_thread.start()
     
     # clean up input: 
     target_turns = [int(str_in) for str_in in target_turns]  # convert string input to int
@@ -99,13 +105,15 @@ def AUTO(deployment_intv_time):
             3) total deployment time (minutes)
     """
     global stopauto
-    global SOS_flag
+    global SOS_flag    
+    
+    # disable auto-release
+    AR_OVRD('T')
 
     rotations_per_drill = float(deployment_intv_time[0])
     time_between_drills = float(deployment_intv_time[1])
     deployment_time = float(deployment_intv_time[2])
 
-    AR_OVRD('1')
     OFF()
 
     # tare rotation tracker
@@ -146,6 +154,9 @@ def RELEASE(arguments=None):
         arguments (_type_, optional): Not currently utilized.
     """
     global stopauto
+    
+    # disable auto-release
+    AR_OVRD('T')
 
     stopauto = False
     underwater = True
@@ -175,6 +186,7 @@ def RELEASE(arguments=None):
     OFF()
     if underwater:
         Thread(daemon=True, target=DRILL, args=(drill_out,)).start()
+        motors[0].auto_release_OVRD = True
     while underwater and not stopauto:
             
         time.sleep(wait_time)
@@ -209,10 +221,12 @@ def RELEASE(arguments=None):
                     OFF() # stop drill out
                     time.sleep(0.5)
                     Thread(daemon=True, target=DRILL, args=(drill_in,)).start() # start drill in
+                    motors[0].auto_release_OVRD = True
                     time.sleep(5)
                     OFF() # stop drill in
                     time.sleep(0.5)
                     Thread(daemon=True, target=DRILL, args=(drill_out,)).start() # resume drill out
+                    motors[0].auto_release_OVRD = True
         except Exception:
             pass
         
@@ -221,6 +235,10 @@ def RELEASE(arguments=None):
     logging.info("exiting RELEASE operation")
 
     OFF()
+    
+    # re-enable auto-release
+    AR_OVRD('F')
+    
     return
 
 def OFF(arguments=None):  
