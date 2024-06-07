@@ -499,12 +499,11 @@ class Drill:
         self.auto_release_kill = False
         release_flag[0] = False
         if depth > 1.05:
-            logging.info("auto release timer started")
             while True:
                 t = time.time() - t0
                 if t > 5*60:
                     release_flag[0] = True
-                    logging.info("auto release flag thrown")
+                    logging.info("Auto release initiated")
                     break
                 if self.auto_release_OVRD == True:
                     break
@@ -586,7 +585,7 @@ class SonarCommChannel:
       if len(read_data) > 0 and read_data[-1] == 0x0a:
         got_line = True
 
-    return read_data.decode('utf-8').rstrip()
+    return eval(read_data.decode('utf-8').rstrip())
 
   def receiveResponse(self) -> str:
     read_data = self.ser.read_until(b'\n')
@@ -597,11 +596,10 @@ class SonarCommChannel:
         Typically, this will be a dictionary, but limited arrays are also allowed.
     """
     commandString = json.dumps(command) + '\n'
-    print('Sending command: ' + commandString)
     sent_count = self.ser.write(bytes(commandString, "utf-8"))
     self.ser.flush()
     if sent_count != len(commandString):
-      print('Sent ' + str(sent_count) + ' bytes, but should have sent ' + len(commandString))
+      logging.info('Sent ' + str(sent_count) + ' bytes, but should have sent ' + len(commandString))
 
   
 class LimitSwitch:
@@ -711,7 +709,7 @@ class Beacon:
             self.__transmit_msg = value
             return True
         except Exception:
-            logging.info("ERROR transmitting message: " + value)
+            logging.info("ERROR transmitting message: " + str(value))
             logging.info(traceback.format_exc())
             return False
 
@@ -909,7 +907,7 @@ class Sensors:
             self.sensor.read()
             P = self.sensor.pressure(ms5837.UNITS_atm)
             T = self.sensor.temperature(ms5837.UNITS_Centigrade)
-            PT = [2,T]
+            PT = [P,T]
             return PT
         
     class Rotations:

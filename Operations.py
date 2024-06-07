@@ -291,39 +291,38 @@ def SONAR(beacon, msg):
             
     """
     
-    
     command = ''
     parameter = None
+    if len(msg) > 0:
+        command = msg[0]
     if len(msg) > 1:
-        command = msg[1]
-    if len(msg) > 2:
-        parameter = msg[2]
+        parameter = msg[1]
 
     with ms.SonarCommChannel() as comm:
-        if command == 'Deploy':
+        if command == 'DEPLOY':
             if not parameter:
-                parameter = "0"
+                parameter = "scan"
             command = {"Command": "Deploy", "Deploy": parameter}
             comm.sendCommand(command)
-            response = comm.receiveResponse()
+            response = comm.receiveStatus()
 
-        elif command == 'Undeploy':
+        elif command == 'UNDEPLOY':
             command = {"Command": "Undeploy"}
             comm.sendCommand(command)
-            response = comm.receiveResponse()
+            response = comm.receiveStatus()
 
-        elif command == 'Shutdown':
+        elif command == 'SHUTDOWN':
             command = {"Command": "Shutdown"}
             comm.sendCommand(command)
-            response = comm.receiveResponse()
+            response = comm.receiveStatus()
         
         else:
-            response = "Uknown request"
+            response = {"Response":"Uknown request"}
         
         
         if response:
-            logging.info(response)
-            beacon.transmit_msg = response
+            beacon.transmit_msg = "PANDA: " + response["Response"]
+    
     
 def SETROT(set_turns):  
     """ Manually overwrite rotation tracking number

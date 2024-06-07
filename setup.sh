@@ -166,10 +166,8 @@ chown -R pi:pi /home/pi/camera_capture
 chmod +x /home/pi/camera_capture/*
 
 # install beacon code
-git clone --single-branch --branch jasmine https://github.com/RoboticOceanographicSurfaceSampler/acoustic-beacons.git /home/pi/nav
+git clone --single-branch --branch jasmine https://github.com/noahaosman/acoustic-beacons.git /home/pi/nav
 chown -R pi:pi /home/pi/nav
-chown -R pi:pi /home/pi/nav/data
-chown -R pi:pi /home/pi/nav/data/*
 cd /home/pi/nav
 bash /home/pi/nav/install.sh
 sed -i '/StandardOutput=syslog/ i Restart=always\

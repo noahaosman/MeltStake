@@ -9,6 +9,7 @@
 
 # Doesnt really seem to work as is.
 # A more precise way to tune the clock speed is to enter the following settings on oscilloscope connected to channel 1:
+#  software package: InstrumentStudio from National Instrument
 #   - time per division : 100 us
 #   - x position : 1.5 ms
 #   - Trigger    : edge

@@ -66,7 +66,6 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
             if Operations.auto_release_flag[0]:
                 msg = 'RELEASE'
                 Operations.auto_release_flag[0] = False
-                logging.info("auto release flag caught")
             else:
                 msg = beacon.recieved_msg.upper()
 
@@ -83,6 +82,12 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
             
             elif command == 'STOPAUTO':
                 Operations.stopauto = True
+                
+            elif command == 'AR_OVRD':
+                Operations.AR_OVRD(arguments)
+                
+            elif command == 'LS_OVRD':
+                Operations.LS_OVRD(arguments)
 
             elif command == 'CLA':
                 Operations.CLA(arguments)
@@ -98,7 +103,7 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
                     pass
             
             elif command == 'SONAR':
-                t_sonar = Thread(daemon=True, target=Operations.SONAR, args=(beacon, arguments,))
+                t_sonar = Thread(daemon=True, target=Operations.SONAR, args=(beacon, arguments,)).start()
 
             elif command in known_commands:  # any other commands will begin as a thread
                 t_new = Thread(daemon=True, target=eval("Operations."+command), args=(arguments, ))
@@ -117,6 +122,12 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
         logging.info("--- RUNTIME ERROR: ---")
         logging.info(traceback.format_exc())
         break
+
+# Shutdown Latte Panda before exiting code
+try:
+    Operations.SONAR("Shutdown")
+except Exception:
+    pass
 
 # set all motors & sublights to off before exiting code
 Operations.SOS_flag = True # this flag tells AUTONOMOUS operation subroutine to exit
