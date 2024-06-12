@@ -71,7 +71,7 @@ try:
     # Create funtion for interfacing with Blue Robotics components
     def WRITE_DUTY_CYCLE(channel:int, value:float) -> bool:
         """ Write speed value to the PCA channel associated with this motor ID """
-        mutex.acquire()
+        mutex.acquire(timeout=0.25)
         if 0 <= channel <= 15:
             if -1.0 <= value <= 1.0:
                 PCA.channels[channel].duty_cycle = \
@@ -97,9 +97,10 @@ class ADS1115:
     Create an ADS1115 class instance.
     """
     __i2c_bus = 1
-    __frequency = 100
+    __frequency = 10
+    __channels = [0,1,2,3]
     
-    def __init__(self, i2c_bus=__i2c_bus, frequency=__frequency):
+    def __init__(self, i2c_bus=__i2c_bus, frequency=__frequency, channels=__channels):
         self.i2c_bus = i2c_bus
         self.frequency = frequency
         # initialize i2c bus:
@@ -114,19 +115,19 @@ class ADS1115:
     def monitor_ADS(self):
         ads = ADS.ADS1115(self.I2C_BUS, address=0x48)
         while True:
-            for i in range(4):
+            for i in self.channels:
                 reading = AnalogIn(ads, eval("ADS.P"+str(i)))
                 self.VOLTAGE[i] = reading.voltage
-                time.sleep(1/(4*self.frequency))
+                time.sleep(1/(len(self.channels)*self.frequency))
 
 # Initialize both ADS1115.
 try:
-    battery_ads = ADS1115(22, 10)
+    battery_ads = ADS1115(22, 4, [0,1,3])
 except Exception as error:
     LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 22:, " + str(error)
     logging.error(LOG_STRING)
 try:
-    navigator_ads = ADS1115(1, 10)
+    navigator_ads = ADS1115(1, 4, [0])
 except Exception as error:
     LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 1:, " + str(error)
     logging.error(LOG_STRING)
