@@ -18,6 +18,7 @@ Operations.OFF()
 Operations.AR_OVRD('T')
 Operations.max_speed = 0.2
 
+armed = False
 
 def button():
 
@@ -26,7 +27,7 @@ def button():
     pin.pull = Pull.DOWN
     
     state = 'OFF'
-    while True:
+    while armed:
         input = pin.value
         if input == 0 and state == 'OFF':
             Thread(daemon=True, target=Operations.DRILL, args=([100, 100],)).start()
@@ -36,9 +37,7 @@ def button():
             state = 'OFF'
         time.sleep(0.25)
         
-        
-Thread(daemon=True, target=button).start()
-
+    return
 
 
 t_operation = Thread()  # initialize main thread variable
@@ -59,8 +58,17 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
         command = msg_split[0]
         arguments = [msg_split[i] for i in range(1,len(msg_split))]
         
+        
+        if command == 'ARM':
+            armed = True
+            time.sleep(0.1)
+            Thread(daemon=True, target=button).start()
 
-        if command == 'OFF':
+        elif command == 'DISARM':
+            armed = False
+            Operations.OFF()
+
+        elif command == 'OFF':
             Operations.OFF()
             Operations.stopauto = True
         

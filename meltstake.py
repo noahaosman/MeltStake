@@ -6,7 +6,7 @@ import json
 import time
 import numpy as np
 from math import sin, cos, asin, atan2, sqrt, pi
-from threading import Thread
+from threading import Thread, Lock
 import traceback
 import socket
 import serial
@@ -42,6 +42,10 @@ except Exception:
 """
 Create a simple PCA9685 class instance.
 """
+
+# Mutex
+mutex = Lock()
+
 try:
     I2C_BUS_PCA = I2C(4)
 except Exception as error:
@@ -67,17 +71,22 @@ try:
     # Create funtion for interfacing with Blue Robotics components
     def WRITE_DUTY_CYCLE(channel:int, value:float) -> bool:
         """ Write speed value to the PCA channel associated with this motor ID """
+        mutex.acquire()
         if 0 <= channel <= 15:
             if -1.0 <= value <= 1.0:
                 PCA.channels[channel].duty_cycle = \
                     int(PCA.frequency*(10**-6)*(1500+400*value)*65535)
-                return True
+                exit_condition = True
             else:
                 logging.error("Invalid motor speed: %s. Value must be between -1 and +1.", str(value))
-                return False
+                exit_condition =  False
         else:
             logging.error("Invalid PCA channel: %s. PCA9685 has 16 channels (0 -> 15).", str(value))
-            return False
+            exit_condition =  False
+        mutex.release()
+        
+        return exit_condition
+    
 except Exception as error:
     LOG_STRING = "failed to initialize PCA9685 driver:, " + str(error)
     logging.error(LOG_STRING)
@@ -108,18 +117,18 @@ class ADS1115:
             for i in range(4):
                 reading = AnalogIn(ads, eval("ADS.P"+str(i)))
                 self.VOLTAGE[i] = reading.voltage
-            time.sleep(1/self.frequency)
+                time.sleep(1/(4*self.frequency))
 
 # Initialize both ADS1115.
 try:
     battery_ads = ADS1115(22, 10)
 except Exception as error:
-    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 22:, " + str(error)
+    LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 22:, " + str(error)
     logging.error(LOG_STRING)
 try:
-    navigator_ads = ADS1115(1, 100)
+    navigator_ads = ADS1115(1, 10)
 except Exception as error:
-    LOG_STRING = "failed to initialize ADS1115 driver on i2c bus 1:, " + str(error)
+    LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 1:, " + str(error)
     logging.error(LOG_STRING)
 
 def bound(value, lwr=0, upr=1):
@@ -754,7 +763,7 @@ class Sensors:
             "Battery" : "IV",
             "Rotations" : "ROT",
             # "Ping" : "PING",
-            "Orientation" : "IMU",
+            # "Orientation" : "IMU",
             "Pressure" : "PT"
         }
     __sample_rate = 10

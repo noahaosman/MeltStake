@@ -49,8 +49,8 @@ if args.mode == 'debug':
     """
     print(tutorial_msg)
 
-startup_time = 3
-time.sleep(startup_time)
+# startup_time = 3
+# time.sleep(startup_time)
 
 # MAIN LOOP:
 while not Operations.battery.under_voltage and not Operations.leaksenor.state:
@@ -67,7 +67,9 @@ while not Operations.battery.under_voltage and not Operations.leaksenor.state:
                 msg = 'RELEASE'
                 Operations.auto_release_flag[0] = False
             else:
-                msg = beacon.recieved_msg.upper()
+                msg = beacon.recieved_msg
+                
+            msg = msg.upper()
 
             beacon.transmit_msg = msg  # echo back the message
             
