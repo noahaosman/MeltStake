@@ -97,10 +97,9 @@ class ADS1115:
     Create an ADS1115 class instance.
     """
     __i2c_bus = 1
-    __frequency = 10
-    __channels = [0,1,2,3]
+    __frequency = 100
     
-    def __init__(self, i2c_bus=__i2c_bus, frequency=__frequency, channels=__channels):
+    def __init__(self, i2c_bus=__i2c_bus, frequency=__frequency):
         self.i2c_bus = i2c_bus
         self.frequency = frequency
         # initialize i2c bus:
@@ -115,19 +114,22 @@ class ADS1115:
     def monitor_ADS(self):
         ads = ADS.ADS1115(self.I2C_BUS, address=0x48)
         while True:
-            for i in self.channels:
-                reading = AnalogIn(ads, eval("ADS.P"+str(i)))
-                self.VOLTAGE[i] = reading.voltage
-                time.sleep(1/(len(self.channels)*self.frequency))
+            for i in range(4):
+                try:
+                    reading = AnalogIn(ads, eval("ADS.P"+str(i)))
+                    self.VOLTAGE[i] = reading.voltage
+                    time.sleep(1/(4*self.frequency))
+                except:
+                    pass
 
 # Initialize both ADS1115.
 try:
-    battery_ads = ADS1115(22, 4, [0,1,3])
+    battery_ads = ADS1115(22, 10)
 except Exception as error:
     LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 22:, " + str(error)
     logging.error(LOG_STRING)
 try:
-    navigator_ads = ADS1115(1, 4, [0])
+    navigator_ads = ADS1115(1, 10)
 except Exception as error:
     LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 1:, " + str(error)
     logging.error(LOG_STRING)
@@ -438,19 +440,23 @@ class Drill:
         s = 0
         while True:
             if abs(self.current_speed - self.speed) > 0.01:
-                s0 = s
-                V0 = V
-                s_desired = self.speed
-                norm_dist = bound((s_desired - s)/r, -1, 1)
-                V_desired = norm_dist * Vmax
-                F_steering = bound(V_desired - V0, -Fmax, Fmax)
-                V = bound(V0 + F_steering, -Vmax, Vmax)
-                s = bound(s0 + V, -1, 1)
-                self.current_speed = s
-                WRITE_DUTY_CYCLE(self.ID_number, self.current_speed)
-                time.sleep(dt)
-            else:
-                time.sleep(0.05)
+                # s0 = s
+                # V0 = V
+                # s_desired = self.speed
+                # norm_dist = bound((s_desired - s)/r, -1, 1)
+                # V_desired = norm_dist * Vmax
+                # F_steering = bound(V_desired - V0, -Fmax, Fmax)
+                # V = bound(V0 + F_steering, -Vmax, Vmax)
+                # s = bound(s0 + V, -1, 1)
+                # self.current_speed = s
+                # WRITE_DUTY_CYCLE(self.ID_number, self.current_speed)
+                # time.sleep(dt)
+                try:
+                    WRITE_DUTY_CYCLE(self.ID_number, self.speed)
+                    self.current_speed = self.speed
+                except:
+                    pass
+            time.sleep(0.05)
     
     def monitor_current(self):
         """ Monitor current draw of motor, set speed to zero if it exceeds limit """
@@ -508,18 +514,17 @@ class Drill:
         t0 = time.time()
         self.auto_release_kill = False
         release_flag[0] = False
-        if depth > 1.05:
-            while True:
-                t = time.time() - t0
-                if t > 5*60:
-                    release_flag[0] = True
-                    logging.info("Auto release initiated")
-                    break
-                if self.auto_release_OVRD == True:
-                    break
-                if self.auto_release_kill == True:
-                    break
-                time.sleep(0.01)
+        while True:
+            t = time.time() - t0
+            if t > 5*60:
+                release_flag[0] = True
+                logging.info("Auto release initiated")
+                break
+            if self.auto_release_OVRD == True:
+                break
+            if self.auto_release_kill == True:
+                break
+            time.sleep(0.01)
             
         return
 
