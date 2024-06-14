@@ -665,13 +665,14 @@ class LimitSwitch:
     #         time.sleep(1/self.LOG_FREQUENCY)
 
     def monitor_limit_switch(self):
-        threshold = 0.05
+        threshold = 0.02
         while True:
             if not self.override:
                 perc = abs((2*navigator_ads.VOLTAGE[0] - self.BASE_OUT)/(2.5))
                 
                 if perc > threshold:
                     self.flag = True
+                    logging.info("Limit switch triggered: "+str(perc)+" %")
                 else:
                     self.flag = False
             else:
