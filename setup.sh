@@ -149,6 +149,11 @@ git clone https://github.com/bluerobotics/llog-python /home/pi/packages/llog-pyt
 cd /home/pi/packages/llog-python
 python3 setup.py install
 
+# Install Blue Robotics PCA software
+git clone https://github.com/bluerobotics/pca9685-python /home/pi/packages/pca9685-python
+cd /home/pi/packages/pca9685-python
+python3 setup.py install
+
 # Install Blue Robotics Bar30 pressure/temperature sensor software
 git clone https://github.com/bluerobotics/ms5837-python /home/pi/packages/ms5837-python
 cd /home/pi/packages/ms5837-python
@@ -174,6 +179,11 @@ sed -i '/StandardOutput=syslog/ i Restart=always\
 RestartSec=30' /etc/systemd/system/beacons.service
 systemctl daemon-reload
 systemctl enable beacons
+#debugging things:
+# udevadm info --attribute-walk --path=/sys/bus/usb-serial/devices/ttyUSB0  #:: info about a device (ttyUSB0 here)
+# udev rules live at /etc/udev/rules.d/10-beacon.rules
+# sudo udevadm trigger  #::  apply udev rules
+# ls -lgr /dev/tty*     #::  list devices. should be ttyBeacon --> ttyUSB* 
 
 
 #---Service Scripts---

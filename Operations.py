@@ -18,7 +18,7 @@ battery = ms.Battery()
 limitswitch = ms.LimitSwitch()
 data = ms.Sensors(battery, motors)
 light = ms.SubLight()
-leaksenor = ms.LeakDetection()
+leaksensor = ms.LeakDetection()
 heartbeat = ms.LED(25)
 heartbeat.blink()
 SOS = ms.LED(11)
@@ -261,6 +261,10 @@ def AR_OVRD(state):
             motors[0].auto_release_OVRD = False
     except Exception:
         pass
+
+def LS_TARE(arguments=None): 
+    
+    limitswitch.tare()
 
 def LS_OVRD(state): 
     """Override limit switch auto stop for drilling. 

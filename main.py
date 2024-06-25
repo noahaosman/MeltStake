@@ -53,7 +53,7 @@ if args.mode == 'debug':
 # time.sleep(startup_time)
 
 # MAIN LOOP:
-while not Operations.battery.under_voltage and not Operations.leaksenor.state:
+while not Operations.battery.under_voltage and not Operations.leaksensor.state:
     try:
         time.sleep(0.05)
 
@@ -145,7 +145,7 @@ if args.mode != 'debug':
     Thread(daemon=True, target=Operations.RELEASE).start()
 
 # transmit SOS call via beacon every 5 seconds
-if Operations.leaksenor.state:
+if Operations.leaksensor.state:
     SOS_msg = "LEAK DETECTED!"
 elif Operations.battery.under_voltage:
     SOS_msg = "LOW BATTERY! : "+f"{Operations.battery.voltage:.1f}"+"V"

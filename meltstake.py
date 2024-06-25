@@ -17,7 +17,7 @@ from brping import Ping1D
 import ms5837
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
 from adafruit_extended_bus import ExtendedI2C as I2C
-from adafruit_pca9685 import PCA9685  # PCA9685 module (PWM driver)
+from pca9685 import PCA9685
 import adafruit_ads1x15.ads1115 as ADS  # ADS1115 module (ADC)
 from adafruit_ads1x15.analog_in import AnalogIn
 from icm20602 import ICM20602
@@ -47,35 +47,19 @@ Create a simple PCA9685 class instance.
 mutex = Lock()
 
 try:
-    I2C_BUS_PCA = I2C(4)
-except Exception as error:
-    LOG_STRING = "failed to initialize i2c communication on bus 4:, " + str(error)
-    logging.error(LOG_STRING)
-try:
     # create PCA class
-    PCA = PCA9685(I2C_BUS_PCA)
+    pca = PCA9685()
     # arm PCA
-    PWM_OE = DigitalInOut(board.D26)
-    PWM_OE.direction = Direction.OUTPUT
-    PWM_OE.value = False  # armed
-    # set clock speed (Default 25000000)
-    with open("/home/pi/MeltStake/Clock_Speed.json", "r") as read_file:
-        CLK_SPD_dict = json.load(read_file)
-    if DEV_NO in CLK_SPD_dict:
-        CLK_SPD = CLK_SPD_dict[DEV_NO]
-    else:
-        CLK_SPD = CLK_SPD_dict['00']
-    PCA.reference_clock_speed = CLK_SPD
-    # Set the PWM duty cycle.
-    PCA.frequency = 375
+    pca.output_enable()
+    # Set the PWM frequency.
+    pca.set_pwm_frequency(200)
     # Create funtion for interfacing with Blue Robotics components
     def WRITE_DUTY_CYCLE(channel:int, value:float) -> bool:
         """ Write speed value to the PCA channel associated with this motor ID """
         mutex.acquire(timeout=0.25)
         if 0 <= channel <= 15:
             if -1.0 <= value <= 1.0:
-                PCA.channels[channel].duty_cycle = \
-                    int(PCA.frequency*(10**-6)*(1500+400*value)*65535)
+                pca.pwm[channel]=1500+400*value
                 exit_condition = True
             else:
                 logging.error("Invalid motor speed: %s. Value must be between -1 and +1.", str(value))
@@ -290,7 +274,7 @@ class LeakDetection:
         """
         while True:
             with open('/home/pi/MeltStake/ServiceScripts/LeakState.txt', "r") as f: 
-                self.State = eval(f.readline())
+                self.state = eval(f.readline())
             time.sleep(0.25)
             
 
