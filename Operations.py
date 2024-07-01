@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG, filename="/home/pi/data/meltstake.log",
 motors = [ms.Drill(0), ms.Drill(1)]
 battery = ms.Battery()
 limitswitch = ms.LimitSwitch()
-data = ms.Sensors(battery, motors)
+data = ms.Sensors(battery, motors, limitswitch)
 light = ms.SubLight()
 leaksensor = ms.LeakDetection()
 heartbeat = ms.LED(25)
@@ -265,18 +265,31 @@ def AR_OVRD(state):
 def LS_TARE(arguments=None): 
     
     limitswitch.tare()
+    logging.info("limit switch tared.")
+
+def LS_THRESH(value):
+    
+    try:
+        value = value[0]
+        limitswitch.threshold = float(value)
+        logging.info("limit switch threshold value updated: "+ str(limitswitch.threshold))
+    except Exception as e:
+        logging.info("limit switch threshold update failed.")
+        logging.info(traceback.format_exc())
+    
+        pass
 
 def LS_OVRD(state): 
     """Override limit switch auto stop for drilling. 
     
     Args:
-        state : T, True, TRUE, 1    --> disable limit switching
-              : F, False, FALSE, 0  --> enable limit switching
+        state : T, 1  --> disable limit switching
+              : F, 0  --> enable limit switching
     """
     try:
-        if state[0] == 'T' or state == '1':
+        if state[0] == 'T' or state[0] == '1':
             limitswitch.override = True
-        elif state[0] == 'F' or state == '0':
+        elif state[0] == 'F' or state[0] == '0':
             limitswitch.override = False
     except Exception:
         pass

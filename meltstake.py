@@ -611,6 +611,8 @@ class LimitSwitch:
     """
     def __init__(self):
         # Tare background field to zero
+        self.threshold = 0.02
+        self.perc = 0
         self.flag = False
         self.override = False
         self.BASE_OUT = 0
@@ -626,39 +628,29 @@ class LimitSwitch:
         Thread(target=self.monitor_limit_switch, daemon=True).start()
 
 
-        # """DATA LOGGING FOR TESTING ONLY"""
-        # """
-        # Initialize data logging
-        # """
-        # LOG_FILENAME = "/home/pi/data/HallEffect.dat"
-        # self.LOG_FREQUENCY = 100
-
-        # self.my_logger = logging.getLogger('MyLogger')
-        # self.my_logger.setLevel(logging.INFO)
-
-        # handler = logging.handlers.RotatingFileHandler(
-        #             LOG_FILENAME, maxBytes=1000000000, backupCount=0)
-        # formatter = logging.Formatter("%(asctime)-15s %(message)s")
-        # handler.setFormatter(formatter)
-        # self.my_logger.addHandler(handler)
-        # Thread(target=self.log_data, daemon=True).start()
-    
-    # def log_data(self):
-    #     while True:
-    #         self.my_logger.info('%.2f V' % (self.VOLT_DIV_RATIO*navigator_ads.VOLTAGE[0]))
-    #         time.sleep(1/self.LOG_FREQUENCY)
+    def tare(self):
+        override_state_holder =  self.override
+        self.override = True
+        self.BASE_OUT_temp = 0
+        time_avg = 1
+        freq = 100
+        time.sleep(1)
+        for i in range(int(time_avg*freq)):
+            self.BASE_OUT_temp = self.BASE_OUT_temp + navigator_ads.VOLTAGE[0]*self.VOLT_DIV_RATIO
+            time.sleep(1/freq)
+        self.BASE_OUT = self.BASE_OUT_temp/int(time_avg*freq)
+        self.override = override_state_holder
 
     def monitor_limit_switch(self):
-        threshold = 0.02
+        
         while True:
             if not self.override:
-                perc = abs((2*navigator_ads.VOLTAGE[0] - self.BASE_OUT)/(2.5))
+                self.perc = abs((2*navigator_ads.VOLTAGE[0] - self.BASE_OUT)/2.5)
+            else:
+                self.perc = 0
                 
-                if perc > threshold:
-                    self.flag = True
-                    logging.info("Limit switch triggered: "+str(perc)+" %")
-                else:
-                    self.flag = False
+            if self.perc > self.threshold:
+                self.flag = True
             else:
                 self.flag = False
             
@@ -736,31 +728,19 @@ class Sensors:
     Contains sensors and data collection
     """
     
-    #TODO: incorporate this type of data management. Max file size + overwriting of old data.
-
-    # LOG_FILENAME = "/home/pi/data/HallEffect.dat"
-    # logger = logging.getLogger('MyLogger')
-    # logger.setLevel(logging.INFO)
-    # handler = logging.handlers.RotatingFileHandler(
-    #             LOG_FILENAME, maxBytes=3000000000, backupCount=0)
-    # formatter = logging.Formatter("%(asctime)-15s %(message)s")
-    # handler.setFormatter(formatter)
-    # logger.addHandler(handler)
-    # """Example usage:"""
-    # logger.info('%.2f V' % (self.VOLT_DIV_RATIO*navigator_ads.VOLTAGE[0]))
-    
     __record = []
     __all_sensors = {
             "Battery" : "IV",
             "Rotations" : "ROT",
             # "Ping" : "PING",
-            # "Orientation" : "IMU",
-            "Pressure" : "PT"
+            "Orientation" : "IMU",
+            "Pressure" : "PT",
+            "LimitSwitch" : "LS"
         }
     __sample_rate = 10
     __DATA_INIT_DELAY = 2
     
-    def __init__(self, battery, motors, sample_rate=__sample_rate, record=list(__all_sensors.keys())):
+    def __init__(self, battery, motors, limitswitch, sample_rate=__sample_rate, record=list(__all_sensors.keys())):
         # self.__battery = battery
         # self.__motors = motors
         
@@ -790,6 +770,10 @@ class Sensors:
                 self.PT = []
                 self._pressure = self.Pressure()
                 sensor_obj = self._pressure
+            elif sensor == "LimitSwitch":
+                self.LS = []
+                self._limitswitch = self.LimitSwitch(limitswitch)
+                sensor_obj = self._limitswitch
                     
             if not sensor_obj.init():
                 logging.warning(sensor + " sensing failed to initialize. Not recording data")
@@ -1070,3 +1054,24 @@ class Sensors:
         def read(self):
             IMU = self.sensor.main()
             return IMU
+
+
+    class LimitSwitch:
+        def __init__(self, limitswitch):
+            self.limitswitch = limitswitch
+        
+        def init(self) -> bool:
+            if not self.read():
+                logging.info("Limit switch reading failed!")
+                return False
+            return True
+
+        def read(self) -> list:
+            try:
+                LS = []
+                LS.append(self.limitswitch.perc)
+                LS.append(self.limitswitch.BASE_OUT)
+                LS.append(self.limitswitch.threshold)
+            except Exception:
+                LS = []
+            return LS

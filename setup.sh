@@ -45,7 +45,7 @@ enable_uart=1
 dtoverlay=spi1-3cs
 dtparam=i2c_arm=on
 dtoverlay=i2c-gpio,bus=1,i2c_gpio_sda=2,i2c_gpio_scl=3
-dtoverlay=i2c-gpio,bus=4,i2c_gpio_sda=6,i2c_gpio_scl=7
+dtoverlay=i2c-gpio,bus=4,i2c_gpio_sda=6,i2c_gpio_scl=7,baudrate=1000000
 dtoverlay=i2c-rtc-gpio,ds3231,i2c_gpio_sda=22,i2c_gpio_scl=23
 EOM
 echo "$INTERFACE_LINE" >> "$INTERFACE_FILE"
@@ -208,8 +208,8 @@ WorkingDirectory=/home/pi/MeltStake/ServiceScripts/
 User=pi
 Restart=always
 RestartSec=10
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=append:/var/log/$SyslogIdentifier.log
+StandardError=append:/var/log/$SyslogIdentifier.log
 SyslogIdentifier=$SyslogIdentifier
 ExecStart=/home/pi/MeltStake/ServiceScripts/$SyslogIdentifier.py
 
@@ -234,8 +234,8 @@ WorkingDirectory=/home/pi/MeltStake
 User=root
 Restart=always
 RestartSec=30
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=append:/var/log/meltstake.log
+StandardError=append:/var/log/meltstake.log
 SyslogIdentifier=meltstake
 ExecStart=/home/pi/MeltStake/main.py
 
