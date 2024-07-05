@@ -196,6 +196,7 @@ scripts='heartbeat LeakDetection'
 
 for SyslogIdentifier in $scripts
 do
+touch /var/log/$SyslogIdentifier.log
 SERVICE_FILE="/etc/systemd/system/$SyslogIdentifier.service"
 echo -n "" > $SERVICE_FILE
 read -r -d '' SERVICE_LINE << EOM
@@ -222,6 +223,7 @@ systemctl enable $SyslogIdentifier
 done
 
 
+touch /var/log/meltstake.log
 SERVICE_FILE="/etc/systemd/system/meltstake.service"
 echo -n "" > $SERVICE_FILE
 read -r -d '' SERVICE_LINE << EOM

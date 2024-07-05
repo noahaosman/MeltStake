@@ -154,6 +154,8 @@ def RELEASE(arguments=None):
     """
     global stopauto
     
+    logging.info("begining RELEASE operation")
+    
     # disable auto-release
     AR_OVRD('T')
 
