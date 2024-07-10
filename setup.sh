@@ -154,6 +154,11 @@ git clone https://github.com/bluerobotics/pca9685-python /home/pi/packages/pca96
 cd /home/pi/packages/pca9685-python
 python3 setup.py install
 
+# Install Blue Robotics ADS1115 software
+git clone https://github.com/bluerobotics/ads1115-python /home/pi/packages/ads1115-python
+cd /home/pi/packages/ads1115-python
+python3 setup.py install
+
 # Install Blue Robotics Bar30 pressure/temperature sensor software
 git clone https://github.com/bluerobotics/ms5837-python /home/pi/packages/ms5837-python
 cd /home/pi/packages/ms5837-python
@@ -165,7 +170,7 @@ cd /home/pi/packages/ping-python
 python3 setup.py install
 
 # install camera code
-git clone https://github.com/noahaosman/camera_capture.git /home/pi/camera_capture
+git clone --single-branch --branch MeltStakes https://github.com/noahaosman/camera_capture.git /home/pi/camera_capture
 yes | bash /home/pi/camera_capture/setup.sh
 chown -R pi:pi /home/pi/camera_capture
 chmod +x /home/pi/camera_capture/*

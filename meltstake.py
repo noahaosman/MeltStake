@@ -16,10 +16,12 @@ import board
 from brping import Ping1D      
 import ms5837
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
-from adafruit_extended_bus import ExtendedI2C as I2C
+#from adafruit_extended_bus import ExtendedI2C as I2C
+import smbus2
 from pca9685 import PCA9685
-import adafruit_ads1x15.ads1115 as ADS  # ADS1115 module (ADC)
-from adafruit_ads1x15.analog_in import AnalogIn
+#import adafruit_ads1x15.ads1115 as ADS  # ADS1115 module (ADC)
+#from adafruit_ads1x15.analog_in import AnalogIn
+from ads1115 import ADS1115
 from icm20602 import ICM20602
 from mmc5983 import MMC5983
 
@@ -49,6 +51,7 @@ mutex = Lock()
 try:
     # create PCA class
     pca = PCA9685()
+    pca.write(0x00, [0xb6]) #reset PCA IC
     # arm PCA
     pca.output_enable()
     # Set the PWM frequency.
@@ -56,7 +59,11 @@ try:
     # Create funtion for interfacing with Blue Robotics components
     def WRITE_DUTY_CYCLE(channel:int, value:float) -> bool:
         """ Write speed value to the PCA channel associated with this motor ID """
-        mutex.acquire(timeout=0.25)
+#        logging.info(str(channel)+" attempting to acquire mutex...")
+#        mutex.acquire()
+#        logging.info(str(channel)+" acquired mutex")
+#        time.sleep(2)
+        time.sleep(0.05)
         if 0 <= channel <= 15:
             if -1.0 <= value <= 1.0:
                 pca.pwm[channel]=1500+400*value
@@ -67,7 +74,8 @@ try:
         else:
             logging.error("Invalid PCA channel: %s. PCA9685 has 16 channels (0 -> 15).", str(value))
             exit_condition =  False
-        mutex.release()
+#        mutex.release()
+#        logging.info(str(channel)+" released mutex")
         
         return exit_condition
     
@@ -76,47 +84,78 @@ except Exception as error:
     logging.error(LOG_STRING)
     
   
-class ADS1115:       
-    """
-    Create an ADS1115 class instance.
-    """
-    __i2c_bus = 1
-    __frequency = 100
+# class ADS1115:       
+#     """
+#     Create an ADS1115 class instance.
+#     """
+#     __i2c_bus = 1
+#     __frequency = 100
     
-    def __init__(self, i2c_bus=__i2c_bus, frequency=__frequency):
-        self.i2c_bus = i2c_bus
-        self.frequency = frequency
-        # initialize i2c bus:
-        try:
-            self.I2C_BUS = I2C(self.i2c_bus)
-        except Exception as error:
-            LOG_STRING = "failed to initialize i2c communication on bus "+str(self.i2c_bus)+":, " + str(error)
-            logging.error(LOG_STRING)
-        self.VOLTAGE = [0,0,0,0]
-        Thread(daemon=True, target=self.monitor_ADS).start()
+#     def __init__(self, i2c_bus=__i2c_bus, frequency=__frequency):
+#         self.i2c_bus = i2c_bus
+#         self.frequency = frequency
+#         # initialize i2c bus:
+#         try:
+#             self.I2C_BUS = smbus2.SMBus(self.i2c_bus)#I2C(self.i2c_bus)
+#         except Exception as error:
+#             LOG_STRING = "failed to initialize i2c communication on bus "+str(self.i2c_bus)+":, " + str(error)
+#             logging.error(LOG_STRING)
+#         self.VOLTAGE = [0,0,0,0]
+#         Thread(daemon=True, target=self.monitor_ADS).start()
 
-    def monitor_ADS(self):
-        ads = ADS.ADS1115(self.I2C_BUS, address=0x48)
-        while True:
-            for i in range(4):
-                try:
-                    reading = AnalogIn(ads, eval("ADS.P"+str(i)))
-                    self.VOLTAGE[i] = reading.voltage
-                    time.sleep(1/(4*self.frequency))
-                except:
-                    pass
+#     def monitor_ADS(self):
+#         ads = ADS.ADS1115(self.I2C_BUS, address=0x48)
+#         while True:
+#             for i in range(4):
+#                 try:
+#                     reading = AnalogIn(ads, eval("ADS.P"+str(i)))
+#                     self.VOLTAGE[i] = reading.voltage
+#                     time.sleep(1/(4*self.frequency))
+#                 except:
+#                     pass
 
 # Initialize both ADS1115.
 try:
-    battery_ads = ADS1115(22, 10)
+    battery_ads = ADS1115(22)
+    battery_ads.VOLTAGE = [0,0,0,0]
+    def monitor_battADS():
+        while True:
+            for i in [0,1,3]:
+                try:
+                    battery_ads.VOLTAGE[i] = battery_ads.read(i)
+                    time.sleep(0.1)
+                except:
+                    pass
+    Thread(daemon=True, target=monitor_battADS).start()
 except Exception as error:
     LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 22:, " + str(error)
     logging.error(LOG_STRING)
 try:
-    navigator_ads = ADS1115(1, 10)
+    navigator_ads = ADS1115(1)
+    navigator_ads.VOLTAGE = [0,0,0,0]
+    def monitor_navADS():
+        while True:
+            for i in [0]:
+                try:
+                    navigator_ads.VOLTAGE[i] = navigator_ads.read(i)
+                    time.sleep(0.1)
+                except:
+                    pass
+    Thread(daemon=True, target=monitor_battADS).start()
 except Exception as error:
     LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 1:, " + str(error)
     logging.error(LOG_STRING)
+
+def monitor_ADS():
+    batt_VOLTAGE = [0,0,0,0]
+    while True:
+        for i in range(3):
+            try:
+                batt_VOLTAGE[i] = battery_ads.read(i)
+                time.sleep(0.1)
+            except:
+                pass
+
 
 def bound(value, lwr=0, upr=1):
     """ useful function to limit a value to range [lwr, upr] """
@@ -435,11 +474,18 @@ class Drill:
                 # self.current_speed = s
                 # WRITE_DUTY_CYCLE(self.ID_number, self.current_speed)
                 # time.sleep(dt)
+                 # logging.info(str(self.ID_number)+" attempting to acquire mutex...")
+                mutex.acquire()
+                 # logging.info(str(self.ID_number)+" acquired mutex")
                 try:
                     WRITE_DUTY_CYCLE(self.ID_number, self.speed)
                     self.current_speed = self.speed
-                except:
-                    pass
+                except Exception as e:
+                    logging.info("PWM write failed for motor "+str(self.ID_number))
+                    logging.info("ERROR : " + str(e))
+                time.sleep(0.1)
+                mutex.release()
+                 # logging.info(str(self.ID_number)+" released mutex")
             time.sleep(0.05)
     
     def monitor_current(self):
@@ -550,7 +596,8 @@ class SubLight:
         if 0. <= value <= 1.:
             self.__brightness = value
             mapped_inp = 2*self.brightness - 1 # map to [-1,1]
-            WRITE_DUTY_CYCLE(self.channel, mapped_inp)
+            if not mutex.locked():
+                WRITE_DUTY_CYCLE(self.channel, mapped_inp)
             return True
         else:
             logging.error("Invalid Sublight brightness value: %s. Must be between 0 and 1", str(value))
