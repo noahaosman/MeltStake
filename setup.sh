@@ -108,6 +108,7 @@ apt-get install -y python3-smbus2
 pip install smbus2
 pip3 install pyyaml
 pip3 install pynmea2
+pip3 install unhandled_exit
 
 
 # Setup RTC
