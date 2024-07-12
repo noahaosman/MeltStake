@@ -197,6 +197,9 @@ systemctl enable beacons
 chmod +x /home/pi/MeltStake/ServiceScripts/*
 chmod +x /home/pi/MeltStake/main.py
 
+touch /home/pi/MeltStake/ServiceScripts/LeakState.txt
+chown -R pi:pi /home/pi/MeltStake/ServiceScripts/LeakState.txt
+
 scripts='heartbeat LeakDetection'
 
 for SyslogIdentifier in $scripts
