@@ -103,7 +103,7 @@ try:
                     time.sleep(0.1)
                 except:
                     pass
-    Thread(daemon=True, target=monitor_battADS).start()
+    Thread(daemon=True, target=monitor_navADS).start()
 except Exception as error:
     LOG_STRING = "Error encountered while initializing ADS1115 driver on i2c bus 1:, " + str(error)
     logging.error(LOG_STRING)
@@ -402,14 +402,45 @@ class Drill:
         while True:
             if abs(self.current_speed - self.speed) > 0.01:
                 mutex.acquire()
+                print(str(self.ID_number)+" Mutex aquired")
                 try:
+                    print('writing speed '+str(self.speed)+' to motor #'+str(self.ID_number)+'. Current speed is '+str(self.current_speed))
                     WRITE_DUTY_CYCLE(self.ID_number, self.speed)
                     self.current_speed = self.speed
                 except Exception as e:
-                    logging.info("PWM write failed for motor "+str(self.ID_number))
-                    logging.info("ERROR : " + str(e))
-                time.sleep(0.1)
+                    logging.error("PWM write failed for motor "+str(self.ID_number))
+                    logging.error("ERROR : " + str(e))
                 mutex.release()
+                print(str(self.ID_number)+" Mutex released")
+            time.sleep(0.05) 
+    
+    
+    def monitor_true_speed(self):
+        """ Not currently in use. Needs more de-bugging. """
+        min_reads = 4
+        while True:
+            pwm_last_measured = 0 
+            mutex.acquire()
+            for i in range(min_reads):
+                print(str(self.ID_number)+'::    mutey acquy')
+                try:
+                    pwm_measured = pca.pwm[self.ID_number]
+                    print(str(self.ID_number)+'::    '+str(i)+": "+str(pwm_measured)+" | "+str(pwm_last_measured))
+                    if i > 0 and pwm_measured != pwm_last_measured:
+                        print(str(self.ID_number)+'::    '+'incorrect read **************************************************')
+                        break
+                    elif i is min_reads-1:
+                        self.current_speed = (float(pwm_measured) - 1500) / 400
+                        print(str(self.ID_number)+'::    '+str((float(pwm_measured) - 1500) / 400))
+                except Exception as e:
+                    print(str(self.ID_number)+'::    '+'bad read **************************************************')
+                    logging.error("PWM read failed for motor "+str(self.ID_number))
+                    logging.error(str(e))
+                    break
+                pwm_last_measured = pwm_measured
+                print(str(self.ID_number)+'::    '+'mutey reley')
+                time.sleep(0.01)
+            mutex.release()
             time.sleep(0.05)
     
     def monitor_current(self):

@@ -78,7 +78,7 @@ def DRILL(target_turns):
         # adjust speed for each motor:
         for motor_no, (motor, dir, done, targ, curr) in enumerate(zip(motors, directions, target_reached, target_turns, turns)):
             if not done:
-                if dir * (targ - curr) <= 0 or motor.overdrawn or (motor.speed > 0 and limitswitch.flag):
+                if dir * (targ - curr) <= 0 or motor.overdrawn or (motor.speed >= 0 and dir > 0 and limitswitch.flag):
                     target_reached[motor_no] = True
                     motor.speed = 0
                 else:
