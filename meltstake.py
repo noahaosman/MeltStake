@@ -16,7 +16,6 @@ import board
 from brping import Ping1D      
 import ms5837
 from digitalio import DigitalInOut, Direction, Pull  # GPIO module
-#from adafruit_extended_bus import ExtendedI2C as I2C
 import smbus2
 from pca9685 import PCA9685
 from ads1115 import ADS1115
@@ -404,7 +403,7 @@ class Drill:
                 mutex.acquire()
                 print(str(self.ID_number)+" Mutex aquired")
                 try:
-                    print('writing speed '+str(self.speed)+' to motor #'+str(self.ID_number)+'. Current speed is '+str(self.current_speed))
+                    logging.info('writing speed '+str(self.speed)+' to motor #'+str(self.ID_number)+'. Current speed is '+str(self.current_speed))
                     WRITE_DUTY_CYCLE(self.ID_number, self.speed)
                     self.current_speed = self.speed
                 except Exception as e:

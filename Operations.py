@@ -43,13 +43,7 @@ def DRILL(target_turns):
     global auto_release_thread
        
     #start new auto release timer thread
-    if not motors[0].auto_release_OVRD:
-        motors[0].auto_release_kill = True
-        time.sleep(0.05)
-        auto_release_thread_new = Thread(daemon=True, target=motors[0].auto_release_timer, args=(data.PT[0], auto_release_flag,))
-        if not auto_release_thread.is_alive():  # make sure any prior counters are dead before starting thread
-            auto_release_thread = auto_release_thread_new
-            auto_release_thread.start()
+    AR_RESET()
     
     # clean up input: 
     target_turns = [int(str_in) for str_in in target_turns]  # convert string input to int
@@ -263,6 +257,21 @@ def AR_OVRD(state):
             motors[0].auto_release_OVRD = False
     except Exception:
         pass
+    
+def AR_RESET(arguments=None): # should this start the countdown again? Currently just exits the AR count-down loop
+    
+    if not motors[0].auto_release_OVRD:
+        try:
+            motors[0].auto_release_kill = True
+            time.sleep(0.05)
+            auto_release_thread_new = Thread(daemon=True, target=motors[0].auto_release_timer, args=(data.PT[0], auto_release_flag,))
+            if not auto_release_thread.is_alive():  # make sure any prior counters are dead before starting thread
+                auto_release_thread = auto_release_thread_new
+                auto_release_thread.start()
+        except Exception as e:
+            logging.info("Auto-release reset failed.")
+            logging.info(traceback.format_exc())
+            pass
 
 def LS_TARE(arguments=None): 
     
